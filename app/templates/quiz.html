@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiz{% endblock %}
+
+{% block body %}
+	<h4 style="text-align: center;">Cuestionario: {{ quiz_category }}</h4>
+	<p class="my-4" style="text-align: justify;">El siguiente cuestionario tiene como finalidad conocer el nivel en el que te encuentras para ofrecerte un primer conjunto de ejercicios. Si cierras esta página, tu progreso no será guardado.</p>
+	{% for item in questions %}
+	<div class="card mb-4">
+		<div class="card-body">
+			<h5 class="card-title">Pregunta 1</h5>
+			<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+			<div class="form-check">
+				<input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="option1">
+				<label class="form-check-label" for="exampleRadios1">
+				Default radio
+				</label>
+			</div>
+			<div class="form-check">
+				<input class="form-check-input" type="radio" name="exampleRadios" id="exampleRadios1" value="option1">
+				<label class="form-check-label" for="exampleRadios1">
+				Default radio
+				</label>
+			</div>
+		</div>
+	</div>
+	{% endfor %}
+	<div class="mb-4" style="text-align: center;">
+		<button type="button" class="btn btn-light">Cancelar</button>
+		<button type="submit" class="btn btn-primary">Enviar</button>
+	</div>
+{% endblock %}
