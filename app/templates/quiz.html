@@ -26,7 +26,7 @@
 	</div>
 	{% endfor %}
 	<div class="mb-4" style="text-align: center;">
-		<button type="button" class="btn btn-light">Cancelar</button>
+		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Cancelar</a>
 		<button type="submit" class="btn btn-primary">Enviar</button>
 	</div>
 {% endblock %}

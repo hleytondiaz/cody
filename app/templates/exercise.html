@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Ejercicio{% endblock %}
+
+{% block body %}
+	<div class="card mb-4">
+		<h5 class="card-header">Ejericio</h5>
+		<div class="card-body">
+			{% filter markdown %}
+### Hello World
+Sea \\(x^2 + y^2 = z^2\\) entonces, \\(x = 1\\)
+
+$$x = 2$$
+			{% endfilter %}
+		</div>
+	</div>
+	<div class="card">
+		<h5 class="card-header">Tarea</h5>
+		<div class="card-body">
+			<h6>Entrada</h6>
+			<p>
+				{{ "##### Hola 1" | markdown }}
+			</p>
+			<h6>Salida</h6>
+			<p>
+				{{ "##### Hola 2" | markdown }}
+			</p>
+			<h6>Ejemplo(s)</h6>
+			<div class="table-responsive">
+				<table class="table table-sm table-bordered">
+					<tbody>
+						<tr>
+							<td style="font-weight: 600;">Entrada</td>
+						</tr>
+						<tr>
+							<td class="bg-light">
+								<pre class="mb-0">1</pre>
+							</td>
+						</tr>
+						<tr>
+							<td style="font-weight: 600;">Salida</td>
+						</tr>
+						<tr>
+							<td class="bg-light">
+								<pre class="mb-0">2</pre>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+	<div class="my-4">
+		<div id="editor" style="min-height: 400px; border: 1px solid rgba(0,0,0,.125);"></div>
+	</div>
+	<div class="mb-4" style="text-align: right;">
+		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
+		<button type="button" class="btn btn-primary">Enviar</button>
+	</div>
+	<div class="card mb-4">
+		<h5 class="card-header">Resultados</h5>
+		<div class="card-body">
+			<h6>Caso &#35;1</h6>
+			<div class="table-responsive">
+				<table class="table table-sm table-bordered">
+					<tbody>
+						<tr>
+							<td style="font-weight: 600;">Entrada</td>
+						</tr>
+						<tr>
+							<td class="bg-light">
+								<pre class="mb-0">1</pre>
+							</td>
+						</tr>
+						<tr>
+							<td style="font-weight: 600;">Salida</td>
+						</tr>
+						<tr>
+							<td class="bg-light">
+								<pre class="mb-0">2</pre>
+							</td>
+						</tr>
+						<tr>
+							<td style="font-weight: 600;">Feedback</td>
+						</tr>
+						<tr>
+							<td class="bg-light">
+								<pre class="mb-0">Este es el feedback...</pre>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block additional_javascript %}
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/theme-xcode.min.js" integrity="sha512-x7Tll5GOde0h/BOxk9HlqwOM0V7qnSk8NR7Qh7qqmD27cMRBlbNfFQFTZDlVsLSuwCr/7gtlfFf3lv59Qkkk8A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-python.min.js" integrity="sha512-5quc8iiv3k68XXN7adEav7dyI4bnTDz7WSa99HZmgJk8gZlabsTQibJso2fAZpSO598IZIasgfu/StF9oX+kqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+	<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+	<script>
+		var editor = ace.edit("editor");
+		editor.setOptions({
+			printMargin: false,
+			highlightActiveLine: false,
+			theme: "ace/theme/xcode",
+			fontSize: "15px"
+		});
+		editor.session.setMode("ace/mode/python");
+	</script>
+{% endblock %}

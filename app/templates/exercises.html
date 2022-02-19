@@ -3,5 +3,31 @@
 {% block title %}Ejercicios{% endblock %}
 
 {% block body %}
-	Lista de ejercicios
+	<div class="table-responsive">
+		<table class="table table-bordered" style="vertical-align: middle;">
+			<thead class="table-light">
+				<th>Ejercicio</th>
+				<th>Nivel</th>
+				<th style="text-align: center;">Progreso</th>
+			</thead>
+			<tbody>
+				{% for item in exercises %}
+				<tr>
+					<td>
+						<a href={{ url_for('exercises', category='programas-basicos', id_exercise=1) }}>{{ item }}</a>
+					</td>
+					<td>Alto</td>
+					<td>
+						<div class="progress">
+							<div class="progress-bar bg-success" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+						</div>
+					</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	<div class="mb-4" style="text-align: center;">
+		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
+	</div>
 {% endblock %}
