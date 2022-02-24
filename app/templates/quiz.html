@@ -4,23 +4,34 @@
 
 {% block body %}
 	<h4 style="text-align: center;">Cuestionario: {{ quiz_category }}</h4>
-	<p class="my-4" style="text-align: justify;">El siguiente cuestionario tiene como finalidad conocer el nivel en el que te encuentras para ofrecerte un primer conjunto de ejercicios. Si cierras esta página, tu progreso no será guardado.</p>
-	{% for item in questions %}
-	<div class="card mb-4">
-		<div class="card-body">
-			<h5 class="card-title">Pregunta {{ item[0] }}</h5>
-			<p class="card-text">{{ item[2] }}</p>
-			{% for alternative in item[3] %}
-				<div class="form-check">
-					<input class="form-check-input" type="radio" name="question-{{ item[1] }}" id="question-{{ item[1] }}" value={{ alternative[0] }}>
-					<label class="form-check-label" for="question-{{ item[1] }}">{{ alternative[1] }}</label>
-				</div>
-			{% endfor %}
+	{% if quiz_done %}
+		<div class="alert alert-warning my-4" role="alert">
+			Este cuestionario ya ha sido respondido anteriormente.
 		</div>
-	</div>
-	{% endfor %}
-	<div class="mb-4" style="text-align: center;">
-		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Cancelar</a>
-		<button type="submit" class="btn btn-primary">Enviar</button>
-	</div>
+		<div style="text-align: center;">
+			<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
+		</div>
+	{% else %}
+		<p class="my-4" style="text-align: justify;">El siguiente cuestionario tiene como finalidad conocer el nivel en el que te encuentras para ofrecerte un primer conjunto de ejercicios. Si cierras esta página, tu progreso no será guardado.</p>
+		<form action="" method="post">
+			{% for item in questions %}
+			<div class="card mb-4">
+				<div class="card-body">
+					<h5 class="card-title">Pregunta {{ item[0] }}</h5>
+					<p class="card-text">{{ item[2] }}</p>
+					{% for alternative in item[3] %}
+						<div class="form-check">
+							<input class="form-check-input" type="radio" name="question-{{ item[1] }}" id="question-{{ item[1] }}" value={{ alternative[0] }}>
+							<label class="form-check-label" for="question-{{ item[1] }}">{{ alternative[1] }}</label>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+			{% endfor %}
+			<div class="mb-4" style="text-align: center;">
+				<a class="btn btn-light" role="button" href={{ url_for('index') }}>Cancelar</a>
+				<button type="submit" class="btn btn-primary">Enviar</button>
+			</div>
+		</form>
+	{% endif %}
 {% endblock %}

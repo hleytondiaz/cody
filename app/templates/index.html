@@ -15,7 +15,7 @@
 				{% for item in progress_list %}
 				<tr>
 					<td>
-						<a href="exercises/programas-basicos">{{ item }}</a>
+						<a href={{ url_for('exercises', category=item[0]) }}>{{ item[1] }}</a>
 					</td>
 					<td>Alto</td>
 					<td>
@@ -24,7 +24,7 @@
 						</div>
 					</td>
 					<td style="text-align: center;">
-						<a class="btn btn-primary" role="button" href={{ url_for('quiz', category='programas-basicos') }}>Evaluar</a>
+						<a class="btn btn-primary" role="button" href={{ url_for('quiz', category=item[0]) }}>Evaluar</a>
 					</td>
 				</tr>
 				{% endfor %}
