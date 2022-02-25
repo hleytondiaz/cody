@@ -3,6 +3,7 @@ from flask import render_template
 from flask import request
 from flaskext.markdown import Markdown
 from flaskext.mysql import MySQL
+from datetime import datetime
 
 app = Flask(__name__)
 mysql = MySQL()
@@ -18,19 +19,17 @@ Markdown(app)
 
 email = 'hugo.leyton@sansano.usm.cl'
 categories = [
-    ('programas-secuenciales', 'Programas Secuenciales'),
-    ('condicionales', 'Condicionales'),
-    ('ciclos', 'Ciclos'),
-    ('Strings', 'strings'),
-    ('funciones', 'Funciones'),
-    ('listas', 'Listas'),
-    ('tuplas', 'Tuplas'),
-    ('diccionarios', 'Diccionarios')
+    ['programas-secuenciales', 'Programas Secuenciales'],
+    ['condicionales', 'Condicionales'],
+    ['ciclos', 'Ciclos'],
+    ['Strings', 'strings'],
+    ['funciones', 'Funciones'],
+    ['listas', 'Listas'],
+    ['tuplas', 'Tuplas'],
+    ['diccionarios', 'Diccionarios']
 ]
 
-def check_quiz_attempted(email, category):
-    conn = mysql.connect()
-    cursor = conn.cursor()
+def check_quiz_attempted(cursor, email, category):
     cursor.execute('SELECT COUNT(*) FROM quiz_attempts WHERE email = %(email)s AND category = %(cat)s;', { 'email': email, 'cat': category})
     total_attempts = cursor.fetchone()[0]
     return total_attempts > 0
@@ -42,7 +41,13 @@ def get_category_index(categories, category):
 
 @app.route('/')
 def index():
-    return render_template('index.html', progress_list=categories)
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    progress_list = []
+    disablements = []
+    for i in range(1, len(categories) + 1):
+        disablements.append(check_quiz_attempted(cursor, email, i))
+    return render_template('index.html', categories=categories, disablements=disablements)
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
@@ -54,10 +59,10 @@ def quiz(category=None):
     quiz_done = False
 
     if request.method == 'GET':
-        if check_quiz_attempted(email, category_index):
+        if check_quiz_attempted(cursor, email, category_index):
             quiz_done = True
         else:
-            cursor.execute('(SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 1 ORDER BY RAND() LIMIT 3) UNION (SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 2 ORDER BY RAND() LIMIT 3) UNION (SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 3 ORDER BY RAND() LIMIT 3);', { 'cat': 1 })
+            cursor.execute('(SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 1 ORDER BY RAND() LIMIT 3) UNION (SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 2 ORDER BY RAND() LIMIT 3) UNION (SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 3 ORDER BY RAND() LIMIT 3);', { 'cat': category_index })
             quiz = cursor.fetchall()
             for i in range(len(quiz)):
                 id_quiz_question, question = quiz[i]
@@ -66,7 +71,7 @@ def quiz(category=None):
                 questions.append([i + 1, id_quiz_question, question, alternatives])
 
     if request.method == 'POST':
-        if check_quiz_attempted(email, category_index):
+        if check_quiz_attempted(cursor, email, category_index):
             quiz_done = True
         else:
             total_score = 0.0
@@ -91,8 +96,12 @@ def quiz(category=None):
             else:
                 final_level = 'AVANZADO'
             final_percentage = round(cont * 100 / 9)
+            insert_stmt = 'INSERT INTO quiz_attempts (email, score_obtained, attempt_date, category) VALUES (%s, %s, %s, %s)'
+            data = (email, total_score, datetime.now(), category_index)
+            cursor.execute(insert_stmt, data)
+            conn.commit()
             '''
-                INSERT HERE
+                AQUÍ GENERAR EJERCICIOS AL ESTUDIANTE
             '''
             return render_template('quiz_done.html', final_level=final_level, final_percentage=final_percentage, quiz_category=quiz_category, category_not_formatted=category_not_formatted)
     return render_template('quiz.html', questions=questions, quiz_category=quiz_category, quiz_done=quiz_done)
@@ -100,8 +109,18 @@ def quiz(category=None):
 @app.route('/exercises/<string:category>')
 @app.route('/exercises/<string:category>/<int:id_exercise>')
 def exercises(category=None, id_exercise=None):
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    category_index = get_category_index(categories, category)
+    quiz_attempted = check_quiz_attempted(cursor, email, category_index)
     if category and id_exercise:
-        return render_template('exercise.html', )
+        cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
+        problem_data = cursor.fetchone()
+        cursor.execute('SELECT input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
+        subproblem_data = cursor.fetchone()
+        cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
+        tests_cases_data = cursor.fetchall()
+        return render_template('exercise.html', problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data)
     else:
         exercises = [
             'Ejemplo 1',
@@ -109,4 +128,4 @@ def exercises(category=None, id_exercise=None):
             'Ejemplo 3',
             'Ejemplo 4'
         ]
-        return render_template('exercises.html', exercises=exercises)
+        return render_template('exercises.html', exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)

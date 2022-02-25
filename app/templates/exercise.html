@@ -4,13 +4,10 @@
 
 {% block body %}
 	<div class="card mb-4">
-		<h5 class="card-header">Ejericio</h5>
+		<h5 class="card-header">{{ problem_data[1] }}</h5>
 		<div class="card-body">
 			{% filter markdown %}
-### Hello World
-Sea \\(x^2 + y^2 = z^2\\) entonces, \\(x = 1\\)
-
-$$x = 2$$
+{{ problem_data[2] }}
 			{% endfilter %}
 		</div>
 	</div>
@@ -19,35 +16,53 @@ $$x = 2$$
 		<div class="card-body">
 			<h6>Entrada</h6>
 			<p>
-				{{ "##### Hola 1" | markdown }}
+				{{ subproblem_data[0] | markdown }}
 			</p>
 			<h6>Salida</h6>
 			<p>
-				{{ "##### Hola 2" | markdown }}
+				{{ subproblem_data[1] | markdown }}
 			</p>
-			<h6>Ejemplo(s)</h6>
-			<div class="table-responsive">
-				<table class="table table-sm table-bordered">
-					<tbody>
-						<tr>
-							<td style="font-weight: 600;">Entrada</td>
-						</tr>
-						<tr>
-							<td class="bg-light">
-								<pre class="mb-0">1</pre>
-							</td>
-						</tr>
-						<tr>
-							<td style="font-weight: 600;">Salida</td>
-						</tr>
-						<tr>
-							<td class="bg-light">
-								<pre class="mb-0">2</pre>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+			{% if subproblem_data[2]|length > 0 %}
+				<h6>Observaciones</h6>
+				<p>
+					{{ subproblem_data[2] | markdown }}
+				</p>
+			{% endif %}
+			{% if tests_cases_data|length > 1 %}
+				<h6>Ejemplos</h6>
+			{% else %}
+				<h6>Ejemplo</h6>
+			{% endif %}
+			{% for item in tests_cases_data %}
+				<div class="table-responsive">
+					<table class="table table-sm table-bordered">
+						<tbody>
+							<tr>
+								<td style="font-weight: 600;">Entrada</td>
+							</tr>
+							<tr>
+								<td class="bg-light">
+									<pre class="mb-0">{{ item[0] }}</pre>
+								</td>
+							</tr>
+							<tr>
+								<td style="font-weight: 600;">Salida</td>
+							</tr>
+							<tr>
+								<td class="bg-light">
+									<pre class="mb-0">{{ item[1] }}</pre>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			{% endfor %}
+			{% if subproblem_data[3]|length > 0 %}
+				<h6>Notas</h6>
+				<p>
+					{{ subproblem_data[3] | markdown }}
+				</p>
+			{% endif %}
 		</div>
 	</div>
 	<div class="my-4">

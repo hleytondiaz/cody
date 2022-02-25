@@ -12,10 +12,14 @@
 				<th style="text-align: center;">Opción</th>
 			</thead>
 			<tbody>
-				{% for item in progress_list %}
+				{% for i in range(8) %}
 				<tr>
 					<td>
-						<a href={{ url_for('exercises', category=item[0]) }}>{{ item[1] }}</a>
+						{% if disablements[i] %}
+							<a href={{ url_for('exercises', category=categories[i][0]) }}>{{ categories[i][1] }}</a>
+						{% else %}
+							{{ categories[i][1] }}
+						{% endif %}
 					</td>
 					<td>Alto</td>
 					<td>
@@ -24,7 +28,11 @@
 						</div>
 					</td>
 					<td style="text-align: center;">
-						<a class="btn btn-primary" role="button" href={{ url_for('quiz', category=item[0]) }}>Evaluar</a>
+						{% if disablements[i] %}
+							<a class="btn btn-primary disabled" role="button" href={{ url_for('quiz', category=categories[i][0]) }}>Evaluar</a>
+						{% else %}
+							<a class="btn btn-primary" role="button" href={{ url_for('quiz', category=categories[i][0]) }}>Evaluar</a>
+						{% endif %}
 					</td>
 				</tr>
 				{% endfor %}
