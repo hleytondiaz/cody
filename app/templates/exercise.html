@@ -66,11 +66,12 @@
 		</div>
 	</div>
 	<div class="my-4">
-		<div id="editor" style="min-height: 400px; border: 1px solid rgba(0,0,0,.125);"></div>
+		<div id="editor" style="min-height: 200px; border: 1px solid rgba(0,0,0,.125);">print("Hola Mundo 2021")</div>
+		<input type="hidden" id="id_problem" value={{ problem_data[0] }}>
 	</div>
 	<div class="mb-4" style="text-align: right;">
 		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
-		<button type="button" class="btn btn-primary">Enviar</button>
+		<button type="button" class="btn btn-primary" onclick="runCode()">Enviar</button>
 	</div>
 	<div class="card mb-4">
 		<h5 class="card-header">Resultados</h5>
@@ -116,7 +117,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-python.min.js" integrity="sha512-5quc8iiv3k68XXN7adEav7dyI4bnTDz7WSa99HZmgJk8gZlabsTQibJso2fAZpSO598IZIasgfu/StF9oX+kqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 	<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-	<script>
+	<script type="text/javascript">
 		var editor = ace.edit("editor");
 		editor.setOptions({
 			printMargin: false,
@@ -125,5 +126,21 @@
 			fontSize: "15px"
 		});
 		editor.session.setMode("ace/mode/python");
+	</script>
+	<script type="text/javascript">
+		function runCode() {
+			var idProblem = document.getElementById("id_problem").value;
+			var sourceCode = editor.getValue();
+			var request = new XMLHttpRequest();
+			request.open("POST", "http://127.0.0.1:5000/submit");
+			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			request.onreadystatechange = function() {
+				if (this.readyState === 4 && this.status === 200) {
+					console.log(this.responseText);
+					//document.getElementById("result").innerHTML = this.responseText;
+				}
+			}
+			request.send("id_problem=" + idProblem + "&source_code=" + sourceCode);
+		}
 	</script>
 {% endblock %}
