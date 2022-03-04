@@ -139,7 +139,7 @@ def exercises(category=None, id_exercise=None):
 @app.route('/submit', methods=['POST'])
 def submit():
     body = request.get_json()
-    
+
     if body is None:
         return 'The request body is null', 400
     
@@ -155,14 +155,14 @@ def submit():
     conn = mysql.connect()
     cursor = conn.cursor()
     cursor.execute('SELECT id_test_case, stdin, expected_output, feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
+    
     tests_cases = cursor.fetchall()
 
-    data = {
-        "submissions": []
-    }
+    data = { "submissions": [] }
+    additional_data = []
 
     for i in range(len(tests_cases)):
-        _, stdin, expected_output, _, _ = tests_cases[i]
+        _, stdin, expected_output, feedback, sample = tests_cases[i]
         payload = {
             "language_id": 71,
             "source_code": source_code,
@@ -170,6 +170,7 @@ def submit():
             "expected_output": expected_output
         }
         data["submissions"].append(payload)
+        additional_data.append([feedback, bool(sample)])
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.90 Safari/537.36'}
@@ -181,7 +182,7 @@ def submit():
             tokens_str += tokens[i]['token']
             tokens_str += ',' if i < len(tokens) - 1 else ''
         
-        fields = 'stdin,stdout,stderr,status_id,token'
+        fields = 'stdin,stdout,stderr,status,status_id,token,expected_output'
 
         while True:
             response = requests.get(url_judge0 + '/submissions/batch?tokens=' + tokens_str + '&base64_encoded=false&fields=' + fields)
@@ -195,10 +196,20 @@ def submit():
             else:
                 sleep(2)
 
-        return response.json(), 200
+        dicc = response.json()
+        i = 0
+
+        for x in dicc['submissions']:
+            x['feedback'] = additional_data[i][0]
+            x['sample'] = additional_data[i][1]
+            if x['feedback'] == '':
+                x['feedback'] = None
+            if not x['sample']:
+                x['stdin'] = None
+                x['stdout'] = None
+                x['expected_output'] = None
+            i += 1
+
+        return dicc, 200
     except:
         return 'Judgment error', response.status_code
-
-
-
-

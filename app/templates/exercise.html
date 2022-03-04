@@ -71,47 +71,68 @@
 	</div>
 	<div class="mb-4" style="text-align: right;">
 		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
-		<button type="button" class="btn btn-primary" onclick="runCode()">Enviar</button>
+		<button type="button" id="submit" class="btn btn-primary">
+			<span class="spinner-border spinner-border-sm" id="loader" role="status" aria-hidden="true" hidden></span>
+			Enviar
+		</button>
 	</div>
-	<div class="card mb-4">
-		<h5 class="card-header">Resultados</h5>
-		<div class="card-body">
-			<h6>Caso &#35;1</h6>
-			<div class="table-responsive">
-				<table class="table table-sm table-bordered">
-					<tbody>
-						<tr>
-							<td style="font-weight: 600;">Entrada</td>
-						</tr>
-						<tr>
-							<td class="bg-light">
-								<pre class="mb-0">1</pre>
-							</td>
-						</tr>
-						<tr>
-							<td style="font-weight: 600;">Salida</td>
-						</tr>
-						<tr>
-							<td class="bg-light">
-								<pre class="mb-0">2</pre>
-							</td>
-						</tr>
-						<tr>
-							<td style="font-weight: 600;">Feedback</td>
-						</tr>
-						<tr>
-							<td class="bg-light">
-								<pre class="mb-0">Este es el feedback...</pre>
-							</td>
-						</tr>
-					</tbody>
-				</table>
+	<div id="results">
+		<!--
+		<div class="card mb-4">
+			<h5 class="card-header">Resultados</h5>
+			<div class="card-body">
+				<div class="table-responsive">
+					<table class="table table-sm table-bordered" style="font-size: 14px;">
+						<tbody>
+							<tr>
+								<td style="font-weight: 600;">
+									Caso &#35;1
+									<div class="text-success" style="float: right; display: inline-block;">Aceptado</div>
+								</td>
+							</tr>
+							<tr>
+								<td style="font-weight: 600;">Entrada</td>
+							</tr>
+							<tr>
+								<td class="bg-light">
+									<pre class="mb-0">1</pre>
+								</td>
+							</tr>
+							<tr>
+								<td style="font-weight: 600;">Salida generada</td>
+							</tr>
+							<tr>
+								<td class="bg-light">
+									<pre class="mb-0">2</pre>
+								</td>
+							</tr>
+							<tr>
+								<td style="font-weight: 600;">Salida esperada</td>
+							</tr>
+							<tr>
+								<td class="bg-light">
+									<pre class="mb-0">2</pre>
+								</td>
+							</tr>
+							<tr>
+								<td style="font-weight: 600;">Retroalimentación</td>
+							</tr>
+							<tr>
+								<td class="bg-light">
+									<pre class="mb-0">Este es el feedback...</pre>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
+		-->
 	</div>
 {% endblock %}
 
 {% block additional_javascript %}
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.min.js" type="text/javascript" charset="utf-8"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/theme-xcode.min.js" integrity="sha512-x7Tll5GOde0h/BOxk9HlqwOM0V7qnSk8NR7Qh7qqmD27cMRBlbNfFQFTZDlVsLSuwCr/7gtlfFf3lv59Qkkk8A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-python.min.js" integrity="sha512-5quc8iiv3k68XXN7adEav7dyI4bnTDz7WSa99HZmgJk8gZlabsTQibJso2fAZpSO598IZIasgfu/StF9oX+kqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -128,19 +149,70 @@
 		editor.session.setMode("ace/mode/python");
 	</script>
 	<script type="text/javascript">
-		function runCode() {
+		$("#submit").click(function() {
 			var idProblem = document.getElementById("id_problem").value;
 			var sourceCode = editor.getValue();
-			var request = new XMLHttpRequest();
-			request.open("POST", "http://127.0.0.1:5000/submit");
-			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-			request.onreadystatechange = function() {
-				if (this.readyState === 4 && this.status === 200) {
-					console.log(this.responseText);
-					//document.getElementById("result").innerHTML = this.responseText;
+			$.ajax({
+				url: 'http://127.0.0.1:5000/submit',
+				data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
+				type: 'POST',
+				contentType: 'application/json',
+				dataType : 'json',
+				beforeSend: function() {
+					$("#loader").attr("hidden", false);
+					$("#submit").attr("disabled", true);
+					$("#results").empty();
+				},
+				success : function(json) {
+					$("#results").append('<div class="card mb-4" id="card-results"></div>');
+					$("#card-results").append('<h5 class="card-header">Resultados</h5>');
+					$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
+					let arr = json['submissions'];
+					for (let i = 1; i <= arr.length; i++) {
+						$("#card-body-results").append('<div id="test-case-' + i.toString() + '"></div>');
+						$("#test-case-" + i.toString()).append('<div class="table-responsive" id="tb-rpsv-' + i.toString() + '"></div>');
+						$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
+						
+						color = arr[i - 1]['status_id'] == 3 ? 'text-success' : 'text-danger';
+						
+						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + '<span class="oi oi-lock-locked"></span>' + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
+						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
+						
+						if (arr[i - 1]['sample']) {
+							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
+						}
+						
+						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
+						
+						if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
+							output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
+							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
+						}
+						
+						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida esperada</td></tr>');
+						
+						if (arr[i - 1]['sample']) {
+							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
+						}
+
+						if (arr[i - 1]['feedback'] !== null) {
+							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
+							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + 'Este es el feedback...' + '</pre></td></tr>');
+						}
+						//$("tb-" + i.toString()).append('');
+					}
+				},
+				error : function(xhr, status) {
+					console.log('Error');
+				},
+				complete : function(xhr, status) {
+					$("#loader").attr("hidden", true);
+					$("#submit").attr("disabled", false);
+					$('html, body').animate({
+						scrollTop: $("#results").offset().top
+					});
 				}
-			}
-			request.send("id_problem=" + idProblem + "&source_code=" + sourceCode);
-		}
+			});
+		});
 	</script>
 {% endblock %}
