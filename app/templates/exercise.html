@@ -70,7 +70,7 @@
 		<input type="hidden" id="id_problem" value={{ problem_data[0] }}>
 	</div>
 	<div class="mb-4" style="text-align: right;">
-		<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
+		<a class="btn btn-light" role="button" href={{ url_for('exercises', category=category) }}>Volver</a>
 		<button type="button" id="submit" class="btn btn-primary">
 			<span class="spinner-border spinner-border-sm" id="loader" role="status" aria-hidden="true" hidden></span>
 			Enviar
@@ -78,57 +78,18 @@
 	</div>
 	<div id="results">
 		<!--
-		<div class="card mb-4">
-			<h5 class="card-header">Resultados</h5>
-			<div class="card-body">
-				<div class="table-responsive">
-					<table class="table table-sm table-bordered" style="font-size: 14px;">
-						<tbody>
-							<tr>
-								<td style="font-weight: 600;">
-									Caso &#35;1
-									<div class="text-success" style="float: right; display: inline-block;">Aceptado</div>
-								</td>
-							</tr>
-							<tr>
-								<td style="font-weight: 600;">Entrada</td>
-							</tr>
-							<tr>
-								<td class="bg-light">
-									<pre class="mb-0">1</pre>
-								</td>
-							</tr>
-							<tr>
-								<td style="font-weight: 600;">Salida generada</td>
-							</tr>
-							<tr>
-								<td class="bg-light">
-									<pre class="mb-0">2</pre>
-								</td>
-							</tr>
-							<tr>
-								<td style="font-weight: 600;">Salida esperada</td>
-							</tr>
-							<tr>
-								<td class="bg-light">
-									<pre class="mb-0">2</pre>
-								</td>
-							</tr>
-							<tr>
-								<td style="font-weight: 600;">Retroalimentación</td>
-							</tr>
-							<tr>
-								<td class="bg-light">
-									<pre class="mb-0">Este es el feedback...</pre>
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
+		<div class="alert alert-success" role="alert">
+			<h4 class="alert-heading">¡Muy bien!</h4>
+			<p>Lograste pasar el 100% de los casos de pruebas.</p>
+			<hr>
+			<p class="mb-0">Por ahora te mantendrás en el nivel medio, pero resuelve más problemas para subir de nivel.</p>
 		</div>
 		-->
 	</div>
+{% endblock %}
+
+{% block additional_css %}
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 {% endblock %}
 
 {% block additional_javascript %}
@@ -164,6 +125,7 @@
 					$("#results").empty();
 				},
 				success : function(json) {
+					console.log(json);
 					$("#results").append('<div class="card mb-4" id="card-results"></div>');
 					$("#card-results").append('<h5 class="card-header">Resultados</h5>');
 					$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
@@ -174,8 +136,9 @@
 						$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
 						
 						color = arr[i - 1]['status_id'] == 3 ? 'text-success' : 'text-danger';
-						
-						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + '<span class="oi oi-lock-locked"></span>' + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
+						lock = arr[i - 1]['sample'] ? '' : '<i class="bi bi-lock-fill"></i>';
+
+						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + lock + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
 						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
 						
 						if (arr[i - 1]['sample']) {
@@ -197,7 +160,7 @@
 
 						if (arr[i - 1]['feedback'] !== null) {
 							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
-							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + 'Este es el feedback...' + '</pre></td></tr>');
+							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['feedback'] + '</pre></td></tr>');
 						}
 						//$("tb-" + i.toString()).append('');
 					}

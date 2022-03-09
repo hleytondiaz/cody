@@ -88,6 +88,7 @@ def quiz(category=None):
             }
             data = request.form.to_dict()
             cont = 0
+            
             for q in data:
                 id_question = q.split('-')[1]
                 cursor.execute('SELECT level, id_correct_alternative FROM quiz_questions WHERE id_question = %(id)s;', { 'id': id_question })
@@ -95,21 +96,44 @@ def quiz(category=None):
                 comp = int(data[q]) == id_correct_alternative
                 cont += int(comp)
                 total_score += scores[level] if comp else 0.0
+
+            distribution = [1, 1, 1]
+            final_level_str = ''
+            final_level_int = 0
+
             if total_score < 0.33:
-                final_level = 'BÁSICO'
+                final_level_str = 'BÁSICO'
+                final_level_int = 1
+                distribution[0] += 1
             elif total_score < 0.66:
                 final_level = 'MEDIO'
+                final_level_int = 2
+                distribution[1] += 1
             else:
                 final_level = 'AVANZADO'
+                final_level_int = 3
+                distribution[2] += 1
+            
             final_percentage = round(cont * 100 / 9)
             insert_stmt = 'INSERT INTO quiz_attempts (email, score_obtained, attempt_date, category) VALUES (%s, %s, %s, %s)'
             data = (email, total_score, datetime.now(), category_index)
             cursor.execute(insert_stmt, data)
             conn.commit()
-            '''
-                AQUÍ GENERAR EJERCICIOS AL ESTUDIANTE
-            '''
-            return render_template('quiz_done.html', final_level=final_level, final_percentage=final_percentage, quiz_category=quiz_category, category_not_formatted=category_not_formatted)
+
+            cursor.execute('(SELECT id_problem FROM problems WHERE category=%(cat)s AND level=1 ORDER BY RAND() LIMIT %(d1)s) UNION (SELECT id_problem FROM problems WHERE category=%(cat)s AND level=2 ORDER BY RAND() LIMIT %(d2)s) UNION (SELECT id_problem FROM problems WHERE category=%(cat)s AND level=3 ORDER BY RAND() LIMIT %(d3)s);', { 'cat': category_index, 'd1': distribution[0], 'd2': distribution[1], 'd3': distribution[2] })
+            problem_ids = cursor.fetchall()
+
+            id_problem_1 = problem_ids[0][0]
+            id_problem_2 = problem_ids[1][0]
+            id_problem_3 = problem_ids[2][0]
+            id_problem_4 = problem_ids[3][0]
+
+            insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
+            data = (email, category_index, final_level_int, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
+            cursor.execute(insert_stmt, data)
+            conn.commit()
+
+            return render_template('quiz_done.html', final_level=final_level_str, final_percentage=final_percentage, quiz_category=quiz_category, category_not_formatted=category_not_formatted)
     return render_template('quiz.html', questions=questions, quiz_category=quiz_category, quiz_done=quiz_done)
 
 @app.route('/exercises/<string:category>')
@@ -126,14 +150,26 @@ def exercises(category=None, id_exercise=None):
         subproblem_data = cursor.fetchone()
         cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
         tests_cases_data = cursor.fetchall()
-        return render_template('exercise.html', problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data)
+        return render_template('exercise.html', problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
     else:
-        exercises = [
-            'Ejemplo 1',
-            'Ejemplo 2',
-            'Ejemplo 3',
-            'Ejemplo 4'
-        ]
+        cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, progress_p1, progress_p2, progress_p3, progress_p4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': email, 'cat': category_index })
+        
+        problem_ids = cursor.fetchall()
+        exercises = []
+
+        for i in range(4):
+            _id = problem_ids[0][i]
+            progress = problem_ids[0][i + 4]
+            title = problem_ids[0][i + 8]
+            level = ''
+            if problem_ids[0][i + 12] == 1:
+                level = 'FÁCIL'
+            elif problem_ids[0][i + 12] == 2:
+                level = 'MEDIO'
+            else:
+                level = 'DIFÍCIL'
+            exercises.append([_id, progress, title, level])
+
         return render_template('exercises.html', exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
 
 @app.route('/submit', methods=['POST'])
@@ -198,8 +234,11 @@ def submit():
 
         dicc = response.json()
         i = 0
+        correct = 0
+        total = len(dicc['submissions'])
 
         for x in dicc['submissions']:
+            correct += 1 if x['status_id'] == 3 else 0
             x['feedback'] = additional_data[i][0]
             x['sample'] = additional_data[i][1]
             if x['feedback'] == '':
@@ -209,6 +248,23 @@ def submit():
                 x['stdout'] = None
                 x['expected_output'] = None
             i += 1
+
+        status = 0
+
+        if correct == 0:
+            status = 1
+        elif correct < total:
+            status = 2
+        else:
+            status = 3
+
+        progress = 1 # -1: back, 0: keep, 1: advance
+
+        dicc['details'] = {
+            'status': status,
+            'progress': progress,
+            'percentage_correct': round(100 * correct / total, 2)
+        }
 
         return dicc, 200
     except:
