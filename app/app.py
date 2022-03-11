@@ -2,10 +2,11 @@ from flask import Flask
 from flask import render_template
 from flask import request
 from flask import jsonify
-from flaskext.markdown import Markdown
+#from flaskext.markdown import Markdown
 from flaskext.mysql import MySQL
 from datetime import datetime
 from time import sleep
+import markdown
 import requests
 
 app = Flask(__name__)
@@ -18,7 +19,7 @@ app.config['MYSQL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = 'root'
 
 mysql.init_app(app)
-Markdown(app)
+#Markdown(app)
 
 email = 'hugo.leyton@sansano.usm.cl'
 categories = [
@@ -145,9 +146,16 @@ def exercises(category=None, id_exercise=None):
     quiz_attempted = check_quiz_attempted(cursor, email, category_index)
     if category and id_exercise:
         cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
-        problem_data = cursor.fetchone()
+        id_problem, title, statement = cursor.fetchone()
+        html = markdown.markdown(statement, extensions=['tables'])
+        problem_data = (id_problem, title, html)
         cursor.execute('SELECT input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
-        subproblem_data = cursor.fetchone()
+        input_description, output_description, observations, notes_examples = cursor.fetchone()
+        input_description = markdown.markdown(input_description, extensions=['tables'])
+        output_description = markdown.markdown(output_description, extensions=['tables'])
+        observations = markdown.markdown(observations, extensions=['tables'])
+        notes_examples = markdown.markdown(notes_examples, extensions=['tables'])
+        subproblem_data = (input_description, output_description, observations, notes_examples)
         cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
         tests_cases_data = cursor.fetchall()
         return render_template('exercise.html', problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
