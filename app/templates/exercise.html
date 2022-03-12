@@ -74,16 +74,8 @@
 			Enviar
 		</button>
 	</div>
-	<div id="results">
-		<!--
-		<div class="alert alert-success" role="alert">
-			<h4 class="alert-heading">¡Muy bien!</h4>
-			<p>Lograste pasar el 100% de los casos de pruebas.</p>
-			<hr>
-			<p class="mb-0">Por ahora te mantendrás en el nivel medio, pero resuelve más problemas para subir de nivel.</p>
-		</div>
-		-->
-	</div>
+	<div id="verdict"></div>
+	<div id="results"></div>
 {% endblock %}
 
 {% block additional_css %}
@@ -139,10 +131,23 @@
 				beforeSend: function() {
 					$("#loader").attr("hidden", false);
 					$("#submit").attr("disabled", true);
+					$("#verdict").empty();
 					$("#results").empty();
 				},
 				success : function(json) {
-					console.log(json);
+					//console.log(json);
+					let verdictDetails = json['details'];
+					console.log(verdictDetails);
+					if (verdictDetails['percentage_correct'] == 0) {
+						$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
+					} else if (verdictDetails['percentage_correct'] < 100) {
+						$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
+					} else {
+						$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
+					}
+
+					$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p>');
+
 					$("#results").append('<div class="card mb-4" id="card-results"></div>');
 					$("#card-results").append('<h5 class="card-header">Resultados</h5>');
 					$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
@@ -189,7 +194,7 @@
 					$("#loader").attr("hidden", true);
 					$("#submit").attr("disabled", false);
 					$('html, body').animate({
-						scrollTop: $("#results").offset().top
+						scrollTop: $("#verdict").offset().top
 					});
 				}
 			});
