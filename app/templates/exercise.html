@@ -123,7 +123,7 @@
 			var idProblem = document.getElementById("id_problem").value;
 			var sourceCode = editor.getValue();
 			$.ajax({
-				url: 'http://127.0.0.1:5000/submit',
+				url: 'http://127.0.0.1:5000/api/submit',
 				data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
 				type: 'POST',
 				contentType: 'application/json',
@@ -146,7 +146,23 @@
 						$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
 					}
 
-					$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p>');
+					$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
+
+					let message = '';
+
+					if (verdictDetails['progress'] == -1) {
+						message = 'Debido a tus intentos fallidos, has retrocedido de nivel';
+					} else if (verdictDetails['progress'] == 0) {
+						message = 'Por ahora te mantendrás en el mismo nivel actual.';
+					} else if (verdictDetails['progress'] == 1) {
+						message = 'Has avanzado al siguiente nivel.'
+					} else if (verdictDetails['progress'] == 2) {
+						message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
+					} else {
+						message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
+					}
+
+					$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
 
 					$("#results").append('<div class="card mb-4" id="card-results"></div>');
 					$("#card-results").append('<h5 class="card-header">Resultados</h5>');

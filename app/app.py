@@ -5,17 +5,24 @@ from flask import jsonify
 from flaskext.mysql import MySQL
 from datetime import datetime
 from time import sleep
+from flask_cors import CORS
+from pylti.flask import lti
 import markdown
 import requests
+import settings
 
 app = Flask(__name__)
 mysql = MySQL()
+cors = CORS(app, resources={r'/api/*': {'origins': '*'}})
 
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 app.config['MYSQL_DATABASE_PORT'] = 3306
 app.config['MYSQL_DATABASE_DB'] = 'smoj_database'
 app.config['MYSQL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = 'root'
+
+app.secret_key = settings.secret_key
+app.config.from_object(settings.configClass)
 
 mysql.init_app(app)
 
@@ -71,6 +78,7 @@ def quiz(category=None):
             quiz = cursor.fetchall()
             for i in range(len(quiz)):
                 id_quiz_question, question = quiz[i]
+                question = markdown.markdown(question)
                 cursor.execute('SELECT id_alternative, description FROM quiz_alternatives WHERE id_question = %(id)s ORDER BY RAND();', { 'id': id_quiz_question })
                 alternatives = cursor.fetchall()
                 questions.append([i + 1, id_quiz_question, question, alternatives])
@@ -180,7 +188,7 @@ def exercises(category=None, id_exercise=None):
 
         return render_template('exercises.html', exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
 
-@app.route('/submit', methods=['POST'])
+@app.route('/api/submit', methods=['POST'])
 def submit():
     body = request.get_json()
 
@@ -269,7 +277,16 @@ def submit():
         else:
             status = 3
 
-        progress = None # -1: back, 0: keep, 1: advance, 2: problem solved
+        '''
+        progress =
+            -2: all the problems tried and not solved, 
+            -1: back, 
+            0 : keep, 
+            1 : advance, 
+            2 : problem solved, 
+            3 : problem set solved
+        '''
+        progress = None 
         percentage_correct = round(100 * correct / total, 2)
 
         cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': email })
@@ -289,7 +306,7 @@ def submit():
             current_distribution = cursor.fetchone()
             current_level = current_distribution[0]
             problem_ids = [x for x in current_distribution[1:]]
-            current_progress = {1: [0, 0], 2: [0, 0], 3: [0, 0]}
+            current_progress = {1: [0, 0], 2: [0, 0], 3: [0, 0]} # { level: [problems completely solved, total attempts minus problems completely solved] }
 
             for i in range(len(problem_ids)):
                 id_ = problem_ids[i]
@@ -301,14 +318,55 @@ def submit():
                 current_progress[level][0] += 1 if score == 100 else 0
                 current_progress[level][1] += attempts - 1 if score == 100 else attempts
 
-            print(current_progress)
-
             if current_level == 1:
-                pass
+                if current_progress[1][0] == 2 or current_progress[2][0] == 1 or current_progress[2][0] == 1:
+                    progress = 1
+                else:
+                    progress = 0
             elif current_level == 2:
-                pass
+                if current_progress[2][0] == 2 or current_progress[3][0] == 1:
+                    progress = 1
+                elif current_progress[1][1] == 2 or current_progress[2][1] == 4 or current_progress[3][1] == 4:
+                    progress = -1
+                else:
+                    progress = 0
             else:
-                pass
+                if current_progress[1][0] + current_progress[2][0] + current_progress[3][0] == 4:
+                    progress = 3
+                elif current_progress[1][1] == 2 or current_progress[2][1] == 2 or current_progress[3][1] == 4:
+                    progress = -1
+                else:
+                    progress = 0
+
+            if progress == -1 or progress == 1 or progress == 3:
+                if progress == -1:
+                    new_level = 1 if current_level == 1 else current_level - 1
+                elif progress == 1:
+                    new_level = 3 if current_level == 3 else current_level + 1
+                else:
+                    new_level = current_level
+
+                distribution = []
+
+                if new_level == 1:
+                    distribution = [2, 1, 1]
+                elif new_level == 2:
+                    distribution = [1, 2, 1]
+                else:
+                    distribution = [1, 1, 2]
+
+                print('current_progress:', current_progress)
+                print('current_level:', current_level)
+                print('new_level:', new_level)
+                print('distribution:', distribution)
+
+                cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': email, 'cat': category_index })
+                problem_ids = [x[0] for x in cursor.fetchall()]
+
+                for i in range(len(distribution)):
+                    level = i + 1
+                    limit = distribution[i]
+                    #cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN %(pro_set) LIMIT %(limit)s;', { 'cat': category_index, 'lvl': level, 'pro_set': })
         else:
             progress = 2
 
@@ -321,3 +379,15 @@ def submit():
         return dicc, 200
     except:
         return 'Judgment error', response.status_code
+
+@app.route('/launch', methods=['POST', 'GET'])
+@lti(request='initial', role='any', app=app)
+def launch(lti=lti):
+    print('lis_person_name_full:')
+    print(request.form.get('lis_person_name_full'))
+    return request.form.get('lis_person_name_full')
+
+
+
+
+

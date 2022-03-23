@@ -12,14 +12,14 @@
 			<a class="btn btn-light" role="button" href={{ url_for('index') }}>Volver</a>
 		</div>
 	{% else %}
-		{% if questions|length > 0%}
+		{% if questions | length > 0%}
 			<p class="my-4" style="text-align: justify;">El siguiente cuestionario tiene como finalidad conocer el nivel en el que te encuentras para ofrecerte un primer conjunto de ejercicios. Si cierras esta página, tu progreso no será guardado.</p>
 			<form action="" method="post">
 				{% for item in questions %}
 				<div class="card mb-4">
 					<div class="card-body">
 						<h5 class="card-title">Pregunta {{ item[0] }}</h5>
-						<p class="card-text">{{ item[2] }}</p>
+						<p class="card-text">{{ item[2] | safe }}</p>
 						{% for alternative in item[3] %}
 							<div class="form-check">
 								<input class="form-check-input" type="radio" name="question-{{ item[1] }}" id="question-{{ item[1] }}" value={{ alternative[0] }}>
@@ -43,4 +43,22 @@
 			</div>
 		{% endif %}
 	{% endif %}
+{% endblock %}
+
+{% block additional_css %}
+	<style type="text/css">
+		pre {
+			background-color: #f0f0f0;
+		}
+	</style>
+{% endblock %}
+
+{% block additional_javascript %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js?lang=python"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		$("pre").addClass("prettyprint");
+	});
+</script>
 {% endblock %}
