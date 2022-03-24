@@ -75,6 +75,32 @@
 		</button>
 	</div>
 	<div id="verdict"></div>
+	<div id="div-submit-feedback">
+		<div class="alert alert-primary alert-dismissible fade show" role="alert">
+			<div id="form-submit-feedback">
+				<form class="row row-cols-lg-auto g-3 align-items-center">
+					<div class="col-12">
+						<b>¿Qué nivel de dificultad te pareció este problema?</b>
+					</div>
+					<div class="col-12">
+						<label class="visually-hidden" for="inlineFormSelect">Preference</label>
+						<select class="form-select" id="inlineFormSelect">
+							<option value="1">Fácil</option>
+							<option value="2">Medio</option>
+							<option value="3">Difícil</option>
+						</select>
+					</div>
+					<div class="col-12">
+						<button type="button" id="submit-feedback" class="btn btn-primary">
+							<span class="spinner-border spinner-border-sm" id="loader-submit-feedback" role="status" aria-hidden="true" hidden></span>
+							Enviar
+						</button>
+					</div>
+				</form>
+				<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+			</div>
+		</div>
+	</div>
 	<div id="results"></div>
 {% endblock %}
 
@@ -95,6 +121,7 @@
 		$(document).ready(function(){
 			$("div.card table").addClass("table table-bordered");
 			$("div.card img").addClass("mx-auto d-block");
+			$("#div-submit-feedback").attr("hidden", true);
 		});
 
 		renderMathInElement(
@@ -127,7 +154,7 @@
 				data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
 				type: 'POST',
 				contentType: 'application/json',
-				dataType : 'json',
+				dataType: 'json',
 				beforeSend: function() {
 					$("#loader").attr("hidden", false);
 					$("#submit").attr("disabled", true);
@@ -163,6 +190,10 @@
 					}
 
 					$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
+
+					if (verdictDetails['give_feedback'] == 1) {
+						$("#div-submit-feedback").attr("hidden", false);
+					}
 
 					$("#results").append('<div class="card mb-4" id="card-results"></div>');
 					$("#card-results").append('<h5 class="card-header">Resultados</h5>');
@@ -209,9 +240,37 @@
 				complete : function(xhr, status) {
 					$("#loader").attr("hidden", true);
 					$("#submit").attr("disabled", false);
-					$('html, body').animate({
+					$("html, body").animate({
 						scrollTop: $("#verdict").offset().top
 					});
+				}
+			});
+		});
+
+		$("#submit-feedback").click(function() {
+			var idProblem = document.getElementById("id_problem").value;
+			var checkedOption = document.getElementById("inlineFormSelect").value
+			$.ajax({
+				url: 'http://127.0.0.1:5000/api/submit-feedback',
+				data: JSON.stringify({ id_problem: idProblem, checked_option: checkedOption }),
+				type: 'POST',
+				contentType: 'application/json',
+				dataType: 'json',
+				beforeSend: function() {
+					$("#loader-submit-feedback").attr("hidden", false);
+					$("#submit-feedback").attr("disabled", true);
+				},
+				success : function(json) {
+					//console.log(json);
+					$("#form-submit-feedback").empty();
+					$("#form-submit-feedback").append('<b>¡Muchas gracias por tu retroalimentación!</b><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
+				},
+				error : function(xhr, status) {
+					console.log('Error');
+				},
+				complete : function(xhr, status) {
+					$("#loader-submit-feedback").attr("hidden", true);
+					$("#submit-feedback").attr("disabled", false);
 				}
 			});
 		});

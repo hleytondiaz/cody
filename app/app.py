@@ -2,6 +2,9 @@ from flask import Flask
 from flask import render_template
 from flask import request
 from flask import jsonify
+from flask import session
+from flask import redirect
+from flask import url_for
 from flaskext.mysql import MySQL
 from datetime import datetime
 from time import sleep
@@ -42,7 +45,7 @@ port_judge0 = '2358'
 url_judge0 = 'http://' + ip_judge0 + ':' + port_judge0
 
 def check_quiz_attempted(cursor, email, category):
-    cursor.execute('SELECT COUNT(*) FROM quiz_attempts WHERE email = %(email)s AND category = %(cat)s;', { 'email': email, 'cat': category})
+    cursor.execute('SELECT COUNT(*) FROM quiz_attempts WHERE email = %(email)s AND category = %(cat)s;', { 'email': email, 'cat': category })
     total_attempts = cursor.fetchone()[0]
     return total_attempts > 0
 
@@ -57,9 +60,28 @@ def index():
     cursor = conn.cursor()
     progress_list = []
     disablements = []
+    progress = []
     for i in range(1, len(categories) + 1):
-        disablements.append(check_quiz_attempted(cursor, email, i))
-    return render_template('index.html', categories=categories, disablements=disablements)
+        if 'user'in session:
+            # obtener nivel (basico, medio, alto) de la categoria
+            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': email, 'cat': i })
+            details = cursor.fetchone()
+            level = 0
+            mean = 0.0
+            if details != None:
+                problem_ids = [x for x in details[1:]]
+                level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 = details
+                sum_ = 0
+                for id_problem in problem_ids:
+                    cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=1;', { 'id_pro': id_problem, 'email': email })
+                    score = cursor.fetchone()[0]
+                    score = 0.0 if score == None else score
+                    sum_ += 1.0 if score == 100 else 0.0
+                mean = round((sum_ / 4) * 100, 2)
+            progress.append([level, mean])
+            disablements.append(check_quiz_attempted(cursor, session['user'], i))
+    print(progress)
+    return render_template('index.html', categories=categories, disablements=disablements, progress=progress)
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
@@ -288,6 +310,7 @@ def submit():
         '''
         progress = None 
         percentage_correct = round(100 * correct / total, 2)
+        give_feedback = 0
 
         cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': email })
         problem_solved = cursor.fetchone()[0]
@@ -369,25 +392,63 @@ def submit():
                     #cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN %(pro_set) LIMIT %(limit)s;', { 'cat': category_index, 'lvl': level, 'pro_set': })
         else:
             progress = 2
+        
+        if problem_solved or status == 3:
+            cursor.execute('SELECT COUNT(*) FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': id_problem, 'email': email })
+            give_feedback = 1 if cursor.fetchone()[0] == 0 else 0
 
         dicc['details'] = {
             'status': status,
             'progress': progress,
-            'percentage_correct': percentage_correct
+            'percentage_correct': percentage_correct,
+            'give_feedback': give_feedback
         }
 
         return dicc, 200
     except:
         return 'Judgment error', response.status_code
 
-@app.route('/launch', methods=['POST', 'GET'])
+@app.route('/api/submit-feedback', methods=['POST'])
+def submit_feedback():
+    sleep(1)
+
+    body = request.get_json()
+
+    if body is None:
+        return 'The request body is null', 400
+    
+    if 'id_problem' not in body:
+        return 'You need to specify the id_problem', 400
+    
+    if 'checked_option' not in body:
+        return 'You need to specify the checked_option', 400
+
+    id_problem = body['id_problem']
+    checked_option = body['checked_option']
+    
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute('SELECT MAX(score) FROM submission_2 WHERE email=%(email)s AND id_problem=%(id_pro)s AND valid=1;', { 'email': session['user'], 'id_pro': id_problem })
+        score = cursor.fetchone()[0]
+        if score == 100:
+            insert_stmt = 'INSERT INTO feedback (id_problem, email, level, status, datetime) VALUES (%s, %s, %s, %s, %s)'
+            data = (id_problem, session['user'], checked_option, True, datetime.now())
+            cursor.execute(insert_stmt, data)
+            conn.commit()
+            return { 'message': 'ok' }, 200
+        else:
+            return { 'message': 'no_ok' }, 200
+    else:
+        return { 'message': 'no_ok' }, 200
+
+@app.route('/launch', methods=['POST'])
 @lti(request='initial', role='any', app=app)
 def launch(lti=lti):
-    print('lis_person_name_full:')
-    print(request.form.get('lis_person_name_full'))
-    return request.form.get('lis_person_name_full')
+    session['user'] = request.form.get('lis_person_contact_email_primary')
+    return redirect(url_for('index'))
 
-
-
-
-
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('index'))
