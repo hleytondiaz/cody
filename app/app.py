@@ -40,7 +40,7 @@ categories = [
     ['tuplas', 'Tuplas'],
     ['diccionarios', 'Diccionarios']
 ]
-ip_judge0 = '18.118.22.172'
+ip_judge0 = '54.207.151.47'
 port_judge0 = '2358'
 url_judge0 = 'http://' + ip_judge0 + ':' + port_judge0
 
@@ -341,9 +341,14 @@ def submit():
                 current_progress[level][0] += 1 if score == 100 else 0
                 current_progress[level][1] += attempts - 1 if score == 100 else attempts
 
+            total_problems_solved = current_progress[1][0] + current_progress[2][0] + current_progress[3][0]
+            total_attempts = current_progress[1][1] + current_progress[2][1] + current_progress[3][1]
+
             if current_level == 1:
                 if current_progress[1][0] == 2 or current_progress[2][0] == 1 or current_progress[2][0] == 1:
                     progress = 1
+                elif total_problems_solved == 0 and total_attempts == 3:
+                    progress = -2
                 else:
                     progress = 0
             elif current_level == 2:
@@ -361,7 +366,7 @@ def submit():
                 else:
                     progress = 0
 
-            if progress == -1 or progress == 1 or progress == 3:
+            if progress in [-2, -1, 1, 3]:
                 if progress == -1:
                     new_level = 1 if current_level == 1 else current_level - 1
                 elif progress == 1:
@@ -369,27 +374,59 @@ def submit():
                 else:
                     new_level = current_level
 
-                distribution = []
+                new_distribution = []
 
                 if new_level == 1:
-                    distribution = [2, 1, 1]
+                    new_distribution = [2, 1, 1]
                 elif new_level == 2:
-                    distribution = [1, 2, 1]
+                    new_distribution = [1, 2, 1]
                 else:
-                    distribution = [1, 1, 2]
+                    new_distribution = [1, 1, 2]
 
                 print('current_progress:', current_progress)
                 print('current_level:', current_level)
                 print('new_level:', new_level)
-                print('distribution:', distribution)
+                print('new_distribution:', new_distribution)
+                print('email:', email)
+                print('cat:', category_index)
 
                 cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': email, 'cat': category_index })
-                problem_ids = [x[0] for x in cursor.fetchall()]
 
-                for i in range(len(distribution)):
+                problem_ids = [str(x[0]) for x in cursor.fetchall()]
+                pro_set = ','.join(problem_ids)
+
+                print('problem_ids:', problem_ids)
+                print('pro_set:', pro_set)
+
+                ids_list = []
+
+                for i in range(len(new_distribution)):
                     level = i + 1
-                    limit = distribution[i]
-                    #cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN %(pro_set) LIMIT %(limit)s;', { 'cat': category_index, 'lvl': level, 'pro_set': })
+                    limit = new_distribution[i]
+                    if len(ids_list) > 0:
+                        cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN (' + pro_set + ') LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': limit })
+                    else:
+                        cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': limit })
+                    ids = cursor.fetchall()
+                    pro_set = ','.join([str(x[0]) for x in ids])
+
+                    if len(ids) < limit:
+                        amount = limit - len(ids)
+                        cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN (' + pro_set + ') LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': amount })
+                        ids_list += [x[0] for x in cursor.fetchall()]
+                    
+                    ids_list += [x[0] for x in ids]
+                
+                print('ids_list', ids_list)
+                id_problem_1, id_problem_2, id_problem_3, id_problem_4 = ids_list
+
+                insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
+                data = (email, category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
+                cursor.execute(insert_stmt, data)
+                conn.commit()
+
+                cursor.execute('UPDATE submission_2 SET valid=0 WHERE email=%(email)s;', { 'email': email })
+                conn.commit()
         else:
             progress = 2
         
@@ -405,8 +442,9 @@ def submit():
         }
 
         return dicc, 200
-    except:
-        return 'Judgment error', response.status_code
+    except Exception as e:
+        print(e)
+        return 'Judgment error', 400
 
 @app.route('/api/submit-feedback', methods=['POST'])
 def submit_feedback():
