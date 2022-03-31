@@ -38,7 +38,7 @@ app.config.from_object(settings.configClass)
 
 mysql.init_app(app)
 
-email = 'hugo.leyton@sansano.usm.cl'
+#email = 'hugo.leyton@sansano.usm.cl'
 categories = [
     ['programas-secuenciales', 'Programas Secuenciales'],
     ['condicionales', 'Condicionales'],
@@ -75,7 +75,7 @@ def index():
     for i in range(1, len(categories) + 1):
         if 'user'in session:
             # obtener nivel (basico, medio, alto) de la categoria
-            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': email, 'cat': i })
+            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': i })
             details = cursor.fetchone()
             level = 0
             mean = 0.0
@@ -84,7 +84,7 @@ def index():
                 level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 = details
                 sum_ = 0
                 for id_problem in problem_ids:
-                    cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=1;', { 'id_pro': id_problem, 'email': email })
+                    cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=1;', { 'id_pro': id_problem, 'email': session['user'] })
                     score = cursor.fetchone()[0]
                     score = 0.0 if score == None else score
                     sum_ += 1.0 if score == 100 else 0.0
@@ -104,7 +104,7 @@ def quiz(category=None):
     quiz_done = False
 
     if request.method == 'GET':
-        if check_quiz_attempted(cursor, email, category_index):
+        if check_quiz_attempted(cursor, session['user'], category_index):
             quiz_done = True
         else:
             cursor.execute('(SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 1 ORDER BY RAND() LIMIT 3) UNION (SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 2 ORDER BY RAND() LIMIT 3) UNION (SELECT id_question, question FROM quiz_questions WHERE category = %(cat)s AND level = 3 ORDER BY RAND() LIMIT 3);', { 'cat': category_index })
@@ -117,7 +117,7 @@ def quiz(category=None):
                 questions.append([i + 1, id_quiz_question, question, alternatives])
 
     if request.method == 'POST':
-        if check_quiz_attempted(cursor, email, category_index):
+        if check_quiz_attempted(cursor, session['user'], category_index):
             quiz_done = True
         else:
             total_score = 0.0
@@ -156,7 +156,7 @@ def quiz(category=None):
             
             final_percentage = round(cont * 100 / 9)
             insert_stmt = 'INSERT INTO quiz_attempts (email, score_obtained, attempt_date, category) VALUES (%s, %s, %s, %s)'
-            data = (email, total_score, datetime.now(), category_index)
+            data = (session['user'], total_score, datetime.now(), category_index)
             cursor.execute(insert_stmt, data)
             conn.commit()
 
@@ -169,7 +169,7 @@ def quiz(category=None):
             id_problem_4 = problem_ids[3][0]
 
             insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-            data = (email, category_index, final_level_int, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
+            data = (session['user'], category_index, final_level_int, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
             cursor.execute(insert_stmt, data)
             conn.commit()
 
@@ -182,7 +182,7 @@ def exercises(category=None, id_exercise=None):
     conn = mysql.connect()
     cursor = conn.cursor()
     category_index = get_category_index(categories, category)
-    quiz_attempted = check_quiz_attempted(cursor, email, category_index)
+    quiz_attempted = check_quiz_attempted(cursor, session['user'], category_index)
     if category and id_exercise:
         cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
         id_problem, title, statement = cursor.fetchone()
@@ -199,7 +199,7 @@ def exercises(category=None, id_exercise=None):
         tests_cases_data = cursor.fetchall()
         return render_template('exercise.html', url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
     else:
-        cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': email, 'cat': category_index })
+        cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
         
         problem_ids = cursor.fetchall()
         exercises = []
@@ -214,7 +214,7 @@ def exercises(category=None, id_exercise=None):
                 level = 'MEDIO'
             else:
                 level = 'DIFÍCIL'
-            cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': _id, 'email': email })
+            cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': _id, 'email': session['user'] })
             score = cursor.fetchone()[0]
             score = 0 if score == None else round(score, 2)
             exercises.append([_id, title, level, score])
@@ -257,6 +257,7 @@ def submit():
         }
         data["submissions"].append(payload)
         additional_data.append([feedback, bool(sample)])
+
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.90 Safari/537.36'}
@@ -323,28 +324,28 @@ def submit():
         percentage_correct = round(100 * correct / total, 2)
         give_feedback = 0
 
-        cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': email })
+        cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': session['user'] })
         problem_solved = cursor.fetchone()[0]
 
         if problem_solved == 0:
             tokens = ','.join(list_tokens)
             insert_stmt = 'INSERT INTO submission_2 (id_problem, email, source_code, score, datetime, tokens, valid) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-            data = (id_problem, email, source_code, percentage_correct, datetime.now(), tokens, True)
+            data = (id_problem, session['user'], source_code, percentage_correct, datetime.now(), tokens, True)
             cursor.execute(insert_stmt, data)
             conn.commit()
 
             cursor.execute('SELECT category FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_problem })
             category_index = cursor.fetchone()[0]
 
-            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC;', { 'email': email, 'cat': category_index })
-            current_distribution = cursor.fetchone()
+            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC;', { 'email': session['user'], 'cat': category_index })
+            current_distribution = cursor.fetchone() # esto fallara si no tiene una distribucion
             current_level = current_distribution[0]
             problem_ids = [x for x in current_distribution[1:]]
             current_progress = {1: [0, 0], 2: [0, 0], 3: [0, 0]} # { level: [problems completely solved, total attempts minus problems completely solved] }
 
             for i in range(len(problem_ids)):
                 id_ = problem_ids[i]
-                cursor.execute('SELECT MAX(score), COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': id_, 'email': email })
+                cursor.execute('SELECT MAX(score), COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': id_, 'email': session['user'] })
                 score, attempts = cursor.fetchone()
                 score = 0.0 if score == None else score
                 cursor.execute('SELECT level FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_ })
@@ -394,7 +395,7 @@ def submit():
                 else:
                     new_distribution = [1, 1, 2]
 
-                cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': email, 'cat': category_index })
+                cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': session['user'], 'cat': category_index })
 
                 problem_ids = [str(x[0]) for x in cursor.fetchall()]
                 pro_set = ','.join(problem_ids)
@@ -433,17 +434,17 @@ def submit():
                 id_problem_1, id_problem_2, id_problem_3, id_problem_4 = ids_list
 
                 insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-                data = (email, category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
+                data = (session['user'], category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
                 cursor.execute(insert_stmt, data)
                 conn.commit()
 
-                cursor.execute('UPDATE submission_2 SET valid=0 WHERE email=%(email)s;', { 'email': email })
+                cursor.execute('UPDATE submission_2 SET valid=0 WHERE email=%(email)s;', { 'email': session['user'] })
                 conn.commit()
         else:
             progress = 2
         
         if problem_solved or status == 3:
-            cursor.execute('SELECT COUNT(*) FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': id_problem, 'email': email })
+            cursor.execute('SELECT COUNT(*) FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': id_problem, 'email': session['user'] })
             give_feedback = 1 if cursor.fetchone()[0] == 0 else 0
 
         dicc['details'] = {
@@ -455,6 +456,7 @@ def submit():
 
         return dicc, 200
     except Exception as e:
+        print(e)
         return 'Judgment error', 400
 
 @app.route('/api/submit-feedback', methods=['POST'])
