@@ -13,16 +13,25 @@ from pylti.flask import lti
 import markdown
 import requests
 import settings
+import os
 
 app = Flask(__name__)
 mysql = MySQL()
 cors = CORS(app, resources={r'/api/*': {'origins': '*'}})
 
+app.config['MYSQL_DATABASE_HOST'] = os.environ.get('MYSQL_DATABASE_HOST')
+app.config['MYSQL_DATABASE_PORT'] = int(os.environ.get('MYSQL_DATABASE_PORT'))
+app.config['MYSQL_DATABASE_DB'] = os.environ.get('MYSQL_DATABASE_DB')
+app.config['MYSQL_DATABASE_USER'] = os.environ.get('MYSQL_DATABASE_USER')
+app.config['MYSQL_DATABASE_PASSWORD'] = os.environ.get('MYSQL_DATABASE_PASSWORD')
+
+'''
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 app.config['MYSQL_DATABASE_PORT'] = 3306
 app.config['MYSQL_DATABASE_DB'] = 'smoj_database'
 app.config['MYSQL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = 'root'
+'''
 
 app.secret_key = settings.secret_key
 app.config.from_object(settings.configClass)
