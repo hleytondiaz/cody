@@ -347,7 +347,7 @@ def submit():
             if current_level == 1:
                 if current_progress[1][0] == 2 or current_progress[2][0] == 1 or current_progress[2][0] == 1:
                     progress = 1
-                elif total_problems_solved == 0 and total_attempts == 3:
+                elif total_problems_solved == 0 and total_attempts == 8:
                     progress = -2
                 else:
                     progress = 0
@@ -383,20 +383,10 @@ def submit():
                 else:
                     new_distribution = [1, 1, 2]
 
-                print('current_progress:', current_progress)
-                print('current_level:', current_level)
-                print('new_level:', new_level)
-                print('new_distribution:', new_distribution)
-                print('email:', email)
-                print('cat:', category_index)
-
                 cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': email, 'cat': category_index })
 
                 problem_ids = [str(x[0]) for x in cursor.fetchall()]
                 pro_set = ','.join(problem_ids)
-
-                print('problem_ids:', problem_ids)
-                print('pro_set:', pro_set)
 
                 ids_list = []
 
@@ -417,7 +407,18 @@ def submit():
                     
                     ids_list += [x[0] for x in ids]
                 
+                '''
+                print('current_progress:', current_progress)
+                print('current_level:', current_level)
+                print('new_level:', new_level)
+                print('new_distribution:', new_distribution)
+                print('email:', email)
+                print('cat:', category_index)
+                print('problem_ids:', problem_ids)
+                print('pro_set:', pro_set)
                 print('ids_list', ids_list)
+                '''
+                
                 id_problem_1, id_problem_2, id_problem_3, id_problem_4 = ids_list
 
                 insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
@@ -443,7 +444,6 @@ def submit():
 
         return dicc, 200
     except Exception as e:
-        print(e)
         return 'Judgment error', 400
 
 @app.route('/api/submit-feedback', methods=['POST'])
@@ -490,3 +490,7 @@ def launch(lti=lti):
 def logout():
     session.pop('user', None)
     return redirect(url_for('index'))
+
+@app.route('/helloworld', methods=['GET'])
+def helloworld():
+    return "<h1>Hello World!</h1>"
