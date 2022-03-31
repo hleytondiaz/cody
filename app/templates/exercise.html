@@ -150,7 +150,7 @@
 			var idProblem = document.getElementById("id_problem").value;
 			var sourceCode = editor.getValue();
 			$.ajax({
-				url: 'http://127.0.0.1:5000/api/submit',
+				url: window.location.origin + '/api/submit',
 				data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
 				type: 'POST',
 				contentType: 'application/json',
