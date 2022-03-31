@@ -253,7 +253,7 @@
 			var idProblem = document.getElementById("id_problem").value;
 			var checkedOption = document.getElementById("inlineFormSelect").value
 			$.ajax({
-				url: 'http://127.0.0.1:5000/api/submit-feedback',
+				url: window.location.origin + '/api/submit-feedback',
 				data: JSON.stringify({ id_problem: idProblem, checked_option: checkedOption }),
 				type: 'POST',
 				contentType: 'application/json',

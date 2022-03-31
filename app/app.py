@@ -51,6 +51,8 @@ categories = [
 ]
 ip_judge0 = '54.207.151.47'
 port_judge0 = '2358'
+#ip_judge0 = os.environ.get('JUDGE0_HOST')
+#port_judge0 = os.environ.get('JUDGE0_PORT')
 url_judge0 = 'http://' + ip_judge0 + ':' + port_judge0
 
 def check_quiz_attempted(cursor, email, category):
@@ -195,7 +197,7 @@ def exercises(category=None, id_exercise=None):
         subproblem_data = (input_description, output_description, observations, notes_examples)
         cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
         tests_cases_data = cursor.fetchall()
-        return render_template('exercise.html', problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
+        return render_template('exercise.html', url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
     else:
         cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': email, 'cat': category_index })
         
