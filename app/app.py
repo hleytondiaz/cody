@@ -190,6 +190,8 @@ def exercises(category=None, id_exercise=None):
     category_index = get_category_index(categories, category)
     quiz_attempted = check_quiz_attempted(cursor, session['user'], category_index)
     if category and id_exercise:
+        cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
+        problem_allowed = id_exercise in cursor.fetchone()
         cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
         id_problem, title, statement = cursor.fetchone()
         html = markdown.markdown(statement, extensions=['tables'])
@@ -203,7 +205,8 @@ def exercises(category=None, id_exercise=None):
         subproblem_data = (input_description, output_description, observations, notes_examples)
         cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
         tests_cases_data = cursor.fetchall()
-        return render_template('exercise.html', page_title=title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
+        page_title = title if problem_allowed else 'Error'
+        return render_template('exercise.html', page_title=page_title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category, problem_allowed=problem_allowed)
     else:
         cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
         
@@ -268,7 +271,7 @@ def submit():
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.90 Safari/537.36'}
-        response = requests.post(url_judge0 + '/submissions/batch', json=data, headers=headers)
+        response = requests.post(url_judge0 + '/submissions/batch', json=data, headers=headers, timeout=10)
         tokens = response.json()
         tokens_str = ''
         
@@ -277,8 +280,6 @@ def submit():
             tokens_str += ',' if i < len(tokens) - 1 else ''
         
         fields = 'stdin,stdout,stderr,status,status_id,token,expected_output'
-
-        print(tokens)
 
         while True:
             response = requests.get(url_judge0 + '/submissions/batch?tokens=' + tokens_str + '&base64_encoded=true&fields=' + fields)

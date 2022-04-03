@@ -3,287 +3,301 @@
 {% block title %}
 	{{ page_title }}
 {% endblock %}
-
 {% block body %}
-	<div class="card mb-4">
-		<h5 class="card-header">{{ problem_data[1] }}</h5>
-		<div class="card-body">
-			{{ problem_data[2] | safe }}
-		</div>
-	</div>
-	<div class="card">
-		<h5 class="card-header">Tarea</h5>
-		<div class="card-body">
-			<h6>Entrada</h6>
-			<p>
-				{{ subproblem_data[0] | safe }}
-			</p>
-			<h6>Salida</h6>
-			<p>
-				{{ subproblem_data[1] | safe }}
-			</p>
-			{% if subproblem_data[2] | length > 0 %}
-				<h6>Observaciones</h6>
-				<p>
-					{{ subproblem_data[2] | safe }}
-				</p>
-			{% endif %}
-			{% if tests_cases_data | length > 1 %}
-				<h6>Ejemplos</h6>
-			{% else %}
-				<h6>Ejemplo</h6>
-			{% endif %}
-			{% for item in tests_cases_data %}
-				<div class="table-responsive">
-					<table class="table table-sm table-bordered">
-						<tbody>
-							<tr>
-								<td style="font-weight: 600;">Entrada</td>
-							</tr>
-							<tr>
-								<td class="bg-light">
-									<pre class="mb-0">{{ item[0] }}</pre>
-								</td>
-							</tr>
-							<tr>
-								<td style="font-weight: 600;">Salida</td>
-							</tr>
-							<tr>
-								<td class="bg-light">
-									<pre class="mb-0">{{ item[1] }}</pre>
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			{% endfor %}
-			{% if subproblem_data[3] | length > 0 %}
-				<h6>Notas</h6>
-				<p>
-					{{ subproblem_data[3] | safe }}
-				</p>
-			{% endif %}
-		</div>
-	</div>
-	<div class="my-4">
-		<div id="editor" style="min-height: 400px; border: 1px solid rgba(0,0,0,.125);"></div>
-		<input type="hidden" id="id_problem" value={{ problem_data[0] }}>
-		<span id="validation" class="text-danger fw-bold">El código debe tener al menos 10 caracteres.</span>
-	</div>
-	<div class="mb-4" style="text-align: right;">
-		<a class="btn btn-light" role="button" href={{ url_for('exercises', category=category) }}>Volver</a>
-		<button type="button" id="submit" class="btn btn-primary">
-			<span class="spinner-border spinner-border-sm" id="loader" role="status" aria-hidden="true" hidden></span>
-			Enviar
-		</button>
-	</div>
-	<div id="verdict"></div>
-	<div id="div-submit-feedback">
-		<div class="alert alert-primary alert-dismissible fade show" role="alert">
-			<div id="form-submit-feedback">
-				<form class="row row-cols-lg-auto g-3 align-items-center">
-					<div class="col-12">
-						<b>¿Qué nivel de dificultad te pareció este problema?</b>
-					</div>
-					<div class="col-12">
-						<label class="visually-hidden" for="inlineFormSelect">Preference</label>
-						<select class="form-select" id="inlineFormSelect">
-							<option value="1">Fácil</option>
-							<option value="2">Medio</option>
-							<option value="3">Difícil</option>
-						</select>
-					</div>
-					<div class="col-12">
-						<button type="button" id="submit-feedback" class="btn btn-primary">
-							<span class="spinner-border spinner-border-sm" id="loader-submit-feedback" role="status" aria-hidden="true" hidden></span>
-							Enviar
-						</button>
-					</div>
-				</form>
-				<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+	{% if problem_allowed %}
+		<div class="card mb-4">
+			<h5 class="card-header">{{ problem_data[1] }}</h5>
+			<div class="card-body">
+				{{ problem_data[2] | safe }}
 			</div>
 		</div>
+		<div class="card">
+			<h5 class="card-header">Tarea</h5>
+			<div class="card-body">
+				<h6>Entrada</h6>
+				<p>
+					{{ subproblem_data[0] | safe }}
+				</p>
+				<h6>Salida</h6>
+				<p>
+					{{ subproblem_data[1] | safe }}
+				</p>
+				{% if subproblem_data[2] | length > 0 %}
+					<h6>Observaciones</h6>
+					<p>
+						{{ subproblem_data[2] | safe }}
+					</p>
+				{% endif %}
+				{% if tests_cases_data | length > 1 %}
+					<h6>Ejemplos</h6>
+				{% else %}
+					<h6>Ejemplo</h6>
+				{% endif %}
+				{% for item in tests_cases_data %}
+					<div class="table-responsive">
+						<table class="table table-sm table-bordered">
+							<tbody>
+								<tr>
+									<td style="font-weight: 600;">Entrada</td>
+								</tr>
+								<tr>
+									<td class="bg-light">
+										<pre class="mb-0">{{ item[0] }}</pre>
+									</td>
+								</tr>
+								<tr>
+									<td style="font-weight: 600;">Salida</td>
+								</tr>
+								<tr>
+									<td class="bg-light">
+										<pre class="mb-0">{{ item[1] }}</pre>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				{% endfor %}
+				{% if subproblem_data[3] | length > 0 %}
+					<h6>Notas</h6>
+					<p>
+						{{ subproblem_data[3] | safe }}
+					</p>
+				{% endif %}
+			</div>
+		</div>
+		<div class="my-4">
+			<div id="editor" style="min-height: 400px; border: 1px solid rgba(0,0,0,.125);"></div>
+			<input type="hidden" id="id_problem" value={{ problem_data[0] }}>
+			<span id="validation" class="text-danger fw-bold">El código debe tener al menos 10 caracteres.</span>
+		</div>
+		<div class="mb-4" style="text-align: right;">
+			<a class="btn btn-light" role="button" href={{ url_for('exercises', category=category) }}>Volver</a>
+			<button type="button" id="submit" class="btn btn-primary">
+				<span class="spinner-border spinner-border-sm" id="loader" role="status" aria-hidden="true" hidden></span>
+				Enviar
+			</button>
+		</div>
+		<div id="verdict"></div>
+		<div id="div-submit-feedback">
+			<div class="alert alert-primary alert-dismissible fade show" role="alert">
+				<div id="form-submit-feedback">
+					<form class="row row-cols-lg-auto g-3 align-items-center">
+						<div class="col-12">
+							<b>¿Qué nivel de dificultad te pareció este problema?</b>
+						</div>
+						<div class="col-12">
+							<label class="visually-hidden" for="inlineFormSelect">Preference</label>
+							<select class="form-select" id="inlineFormSelect">
+								<option value="1">Fácil</option>
+								<option value="2">Medio</option>
+								<option value="3">Difícil</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<button type="button" id="submit-feedback" class="btn btn-primary">
+								<span class="spinner-border spinner-border-sm" id="loader-submit-feedback" role="status" aria-hidden="true" hidden></span>
+								Enviar
+							</button>
+						</div>
+					</form>
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			</div>
+		</div>
+		<div id="results"></div>
+	{% else %}
+	<div class="alert alert-danger" role="alert">
+		No tienes permitido ver este problema porque no forma parte de tu distribución actual.
 	</div>
-	<div id="results"></div>
+	{% endif %}
 {% endblock %}
 
 {% block additional_css %}
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.css">
+	{% if problem_allowed %}
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.css">
+	{% endif %}
 {% endblock %}
 
 {% block additional_javascript %}
-	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.min.js" type="text/javascript" charset="utf-8"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/theme-xcode.min.js" integrity="sha512-x7Tll5GOde0h/BOxk9HlqwOM0V7qnSk8NR7Qh7qqmD27cMRBlbNfFQFTZDlVsLSuwCr/7gtlfFf3lv59Qkkk8A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-python.min.js" integrity="sha512-5quc8iiv3k68XXN7adEav7dyI4bnTDz7WSa99HZmgJk8gZlabsTQibJso2fAZpSO598IZIasgfu/StF9oX+kqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/contrib/auto-render.min.js"></script>
-	<script type="text/javascript">
-		$(document).ready(function(){
-			$("div.card table").addClass("table table-bordered");
-			$("div.card img").addClass("mx-auto d-block");
-			$("#div-submit-feedback").attr("hidden", true);
-			$("#validation").attr("hidden", true);
-		});
+	{% if problem_allowed %}
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/theme-xcode.min.js" integrity="sha512-x7Tll5GOde0h/BOxk9HlqwOM0V7qnSk8NR7Qh7qqmD27cMRBlbNfFQFTZDlVsLSuwCr/7gtlfFf3lv59Qkkk8A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-python.min.js" integrity="sha512-5quc8iiv3k68XXN7adEav7dyI4bnTDz7WSa99HZmgJk8gZlabsTQibJso2fAZpSO598IZIasgfu/StF9oX+kqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.js"></script>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/contrib/auto-render.min.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function(){
+				$("div.card table").addClass("table table-bordered");
+				$("div.card img").addClass("mx-auto d-block");
+				$("#div-submit-feedback").attr("hidden", true);
+				$("#validation").attr("hidden", true);
+			});
 
-		renderMathInElement(
-			document.body,
-			{
-				delimiters: [
-					{left: "$$", right: "$$", display: true},
-					{left: "\\[", right: "\\]", display: true},
-					{left: "$", right: "$", display: false},
-					{left: "\\(", right: "\\)", display: false}
-				]
-			}
-		);
+			renderMathInElement(
+				document.body,
+				{
+					delimiters: [
+						{left: "$$", right: "$$", display: true},
+						{left: "\\[", right: "\\]", display: true},
+						{left: "$", right: "$", display: false},
+						{left: "\\(", right: "\\)", display: false}
+					]
+				}
+			);
 
-		var editor = ace.edit("editor");
-		
-		editor.setOptions({
-			printMargin: false,
-			highlightActiveLine: false,
-			theme: "ace/theme/xcode",
-			fontSize: "15px"
-		});
-		editor.session.setMode("ace/mode/python");
+			var editor = ace.edit("editor");
+			
+			editor.setOptions({
+				printMargin: false,
+				highlightActiveLine: false,
+				theme: "ace/theme/xcode",
+				fontSize: "15px"
+			});
+			editor.session.setMode("ace/mode/python");
 
-		$("#submit").click(function() {
-			var idProblem = document.getElementById("id_problem").value;
-			var sourceCode = editor.getValue();
-			if (sourceCode.trim().length > 0) {
+			$("#submit").click(function() {
+				var idProblem = document.getElementById("id_problem").value;
+				var sourceCode = editor.getValue();
+				if (sourceCode.trim().length > 0) {
+					$.ajax({
+						url: window.location.origin + '/api/submit',
+						data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
+						type: 'POST',
+						contentType: 'application/json',
+						dataType: 'json',
+						beforeSend: function() {
+							$("#loader").attr("hidden", false);
+							$("#submit").attr("disabled", true);
+							$("#validation").attr("hidden", true);
+							$("#verdict").empty();
+							$("#results").empty();
+						},
+						success : function(json) {
+							let verdictDetails = json['details'];
+							if (verdictDetails['percentage_correct'] == 0) {
+								$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
+							} else if (verdictDetails['percentage_correct'] < 100) {
+								$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
+							} else {
+								$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
+							}
+
+							$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
+
+							let message = '';
+
+							if (verdictDetails['progress'] == -2) {
+								message = 'Debido a tus constantes intentos fallidos, tu distribución de ejercicios ha cambiado.';
+							} else if (verdictDetails['progress'] == -1) {
+								message = 'Debido a tus intentos fallidos, has retrocedido de nivel.';
+							} else if (verdictDetails['progress'] == 0) {
+								message = 'Por ahora te mantendrás en el mismo nivel actual.';
+							} else if (verdictDetails['progress'] == 1) {
+								message = 'Has avanzado al siguiente nivel.'
+							} else if (verdictDetails['progress'] == 2) {
+								message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
+							} else {
+								message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
+							}
+
+							$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
+
+							if (verdictDetails['give_feedback'] == 1) {
+								$("#div-submit-feedback").attr("hidden", false);
+							}
+
+							$("#results").append('<div class="card mb-4" id="card-results"></div>');
+							$("#card-results").append('<h5 class="card-header">Resultados</h5>');
+							$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
+							let arr = json['submissions'];
+							for (let i = 1; i <= arr.length; i++) {
+								$("#card-body-results").append('<div id="test-case-' + i.toString() + '"></div>');
+								$("#test-case-" + i.toString()).append('<div class="table-responsive" id="tb-rpsv-' + i.toString() + '"></div>');
+								$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
+								
+								color = arr[i - 1]['status_id'] == 3 ? 'text-success' : 'text-danger';
+								lock = arr[i - 1]['sample'] ? '' : '<i class="bi bi-lock-fill"></i>';
+
+								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + lock + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
+								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
+								
+								if (arr[i - 1]['sample']) {
+									$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
+								}
+								
+								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
+								
+								if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
+									output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
+									$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
+								}
+								
+								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida esperada</td></tr>');
+								
+								if (arr[i - 1]['sample']) {
+									$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
+								}
+
+								if (arr[i - 1]['feedback'] !== null) {
+									$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
+									$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['feedback'] + '</pre></td></tr>');
+								}
+								//$("tb-" + i.toString()).append('');
+							}
+						},
+						error : function(xhr, status) {
+							$("html, body").animate({
+								scrollTop: $("#results").offset().top
+							});
+							$("#results").append('<div class="alert alert-danger" role="alert" id="card-results">En este momento ha sido imposible establecer una comunicación con el sistema de juzgamiento. Por favor, intenta más tarde.</div>');
+						},
+						complete : function(xhr, status) {
+							$("#loader").attr("hidden", true);
+							$("#submit").attr("disabled", false);
+							$("html, body").animate({
+								scrollTop: $("#verdict").offset().top
+							});
+						}
+					});
+				} else {
+					$("html, body").animate({
+						scrollTop: $("#editor").offset().top
+					});
+					$("#validation").attr("hidden", false);
+					editor.focus();
+				}
+			});
+
+			$("#submit-feedback").click(function() {
+				var idProblem = document.getElementById("id_problem").value;
+				var checkedOption = document.getElementById("inlineFormSelect").value
 				$.ajax({
-					url: window.location.origin + '/api/submit',
-					data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
+					url: window.location.origin + '/api/submit-feedback',
+					data: JSON.stringify({ id_problem: idProblem, checked_option: checkedOption }),
 					type: 'POST',
 					contentType: 'application/json',
 					dataType: 'json',
 					beforeSend: function() {
-						$("#loader").attr("hidden", false);
-						$("#submit").attr("disabled", true);
-						$("#validation").attr("hidden", true);
-						$("#verdict").empty();
-						$("#results").empty();
+						$("#loader-submit-feedback").attr("hidden", false);
+						$("#submit-feedback").attr("disabled", true);
 					},
 					success : function(json) {
-						let verdictDetails = json['details'];
-						console.log(verdictDetails);
-						if (verdictDetails['percentage_correct'] == 0) {
-							$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
-						} else if (verdictDetails['percentage_correct'] < 100) {
-							$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
-						} else {
-							$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
-						}
-
-						$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
-
-						let message = '';
-
-						if (verdictDetails['progress'] == -2) {
-							message = 'Debido a tus constantes intentos fallidos, tu distribución de ejercicios ha cambiado.';
-						} else if (verdictDetails['progress'] == -1) {
-							message = 'Debido a tus intentos fallidos, has retrocedido de nivel.';
-						} else if (verdictDetails['progress'] == 0) {
-							message = 'Por ahora te mantendrás en el mismo nivel actual.';
-						} else if (verdictDetails['progress'] == 1) {
-							message = 'Has avanzado al siguiente nivel.'
-						} else if (verdictDetails['progress'] == 2) {
-							message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
-						} else {
-							message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
-						}
-
-						$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
-
-						if (verdictDetails['give_feedback'] == 1) {
-							$("#div-submit-feedback").attr("hidden", false);
-						}
-
-						$("#results").append('<div class="card mb-4" id="card-results"></div>');
-						$("#card-results").append('<h5 class="card-header">Resultados</h5>');
-						$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
-						let arr = json['submissions'];
-						for (let i = 1; i <= arr.length; i++) {
-							$("#card-body-results").append('<div id="test-case-' + i.toString() + '"></div>');
-							$("#test-case-" + i.toString()).append('<div class="table-responsive" id="tb-rpsv-' + i.toString() + '"></div>');
-							$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
-							
-							color = arr[i - 1]['status_id'] == 3 ? 'text-success' : 'text-danger';
-							lock = arr[i - 1]['sample'] ? '' : '<i class="bi bi-lock-fill"></i>';
-
-							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + lock + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
-							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
-							
-							if (arr[i - 1]['sample']) {
-								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
-							}
-							
-							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
-							
-							if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
-								output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
-								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
-							}
-							
-							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida esperada</td></tr>');
-							
-							if (arr[i - 1]['sample']) {
-								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
-							}
-
-							if (arr[i - 1]['feedback'] !== null) {
-								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
-								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['feedback'] + '</pre></td></tr>');
-							}
-							//$("tb-" + i.toString()).append('');
-						}
+						//console.log(json);
+						$("#form-submit-feedback").empty();
+						$("#form-submit-feedback").append('<b>¡Muchas gracias por tu retroalimentación!</b><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
 					},
 					error : function(xhr, status) {
 						console.log('Error');
 					},
 					complete : function(xhr, status) {
-						$("#loader").attr("hidden", true);
-						$("#submit").attr("disabled", false);
-						$("html, body").animate({
-							scrollTop: $("#verdict").offset().top
-						});
+						$("#loader-submit-feedback").attr("hidden", true);
+						$("#submit-feedback").attr("disabled", false);
 					}
 				});
-			} else {
-				$("#validation").attr("hidden", false);
-				editor.focus();
-			}
-		});
-
-		$("#submit-feedback").click(function() {
-			var idProblem = document.getElementById("id_problem").value;
-			var checkedOption = document.getElementById("inlineFormSelect").value
-			$.ajax({
-				url: window.location.origin + '/api/submit-feedback',
-				data: JSON.stringify({ id_problem: idProblem, checked_option: checkedOption }),
-				type: 'POST',
-				contentType: 'application/json',
-				dataType: 'json',
-				beforeSend: function() {
-					$("#loader-submit-feedback").attr("hidden", false);
-					$("#submit-feedback").attr("disabled", true);
-				},
-				success : function(json) {
-					//console.log(json);
-					$("#form-submit-feedback").empty();
-					$("#form-submit-feedback").append('<b>¡Muchas gracias por tu retroalimentación!</b><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
-				},
-				error : function(xhr, status) {
-					console.log('Error');
-				},
-				complete : function(xhr, status) {
-					$("#loader-submit-feedback").attr("hidden", true);
-					$("#submit-feedback").attr("disabled", false);
-				}
 			});
-		});
-	</script>
+		</script>
+	{% endif %}
 {% endblock %}
