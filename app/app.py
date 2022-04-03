@@ -10,10 +10,15 @@ from datetime import datetime
 from time import sleep
 from flask_cors import CORS
 from pylti.flask import lti
+from dotenv import load_dotenv
+from dotenv import find_dotenv
+from base64 import b64decode
 import markdown
 import requests
 import settings
 import os
+
+load_dotenv(find_dotenv())
 
 app = Flask(__name__)
 mysql = MySQL()
@@ -25,34 +30,24 @@ app.config['MYSQL_DATABASE_DB'] = os.environ.get('MYSQL_DATABASE_DB')
 app.config['MYSQL_DATABASE_USER'] = os.environ.get('MYSQL_DATABASE_USER')
 app.config['MYSQL_DATABASE_PASSWORD'] = os.environ.get('MYSQL_DATABASE_PASSWORD')
 
-'''
-app.config['MYSQL_DATABASE_HOST'] = 'localhost'
-app.config['MYSQL_DATABASE_PORT'] = 3306
-app.config['MYSQL_DATABASE_DB'] = 'smoj_database'
-app.config['MYSQL_DATABASE_USER'] = 'root'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'root'
-'''
-
-app.secret_key = settings.secret_key
+app.secret_key = os.environ.get('SECRET_FLASK')
 app.config.from_object(settings.configClass)
 
 mysql.init_app(app)
 
-#email = 'hugo.leyton@sansano.usm.cl'
 categories = [
     ['programas-secuenciales', 'Programas Secuenciales'],
     ['condicionales', 'Condicionales'],
     ['ciclos', 'Ciclos'],
-    ['Strings', 'strings'],
+    ['Strings', 'Strings'],
     ['funciones', 'Funciones'],
     ['listas', 'Listas'],
     ['tuplas', 'Tuplas'],
     ['diccionarios', 'Diccionarios']
 ]
-ip_judge0 = '54.207.151.47'
-port_judge0 = '2358'
-#ip_judge0 = os.environ.get('JUDGE0_HOST')
-#port_judge0 = os.environ.get('JUDGE0_PORT')
+
+ip_judge0 = os.environ.get('JUDGE0_HOST')
+port_judge0 = os.environ.get('JUDGE0_PORT')
 url_judge0 = 'http://' + ip_judge0 + ':' + port_judge0
 
 def check_quiz_attempted(cursor, email, category):
@@ -64,6 +59,15 @@ def get_category_index(categories, category):
     for i in range(len(categories)):
         if categories[i][0] == category:
             return i + 1
+
+def modified_b64decode(string):
+    if string != None:
+        if len(string) > 0:
+            return b64decode(string).decode('utf-8')
+        else:
+            return ''
+    else:
+        return None
 
 @app.route('/')
 def index():
@@ -91,8 +95,8 @@ def index():
                 mean = round((sum_ / 4) * 100, 2)
             progress.append([level, mean])
             disablements.append(check_quiz_attempted(cursor, session['user'], i))
-    print(progress)
-    return render_template('index.html', categories=categories, disablements=disablements, progress=progress)
+    page_title = 'Inicio'
+    return render_template('index.html', page_title=page_title, categories=categories, disablements=disablements, progress=progress)
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
@@ -102,6 +106,8 @@ def quiz(category=None):
     category_not_formatted, quiz_category = categories[category_index - 1]
     questions = []
     quiz_done = False
+
+    page_title = 'Quiz ' + quiz_category
 
     if request.method == 'GET':
         if check_quiz_attempted(cursor, session['user'], category_index):
@@ -173,8 +179,8 @@ def quiz(category=None):
             cursor.execute(insert_stmt, data)
             conn.commit()
 
-            return render_template('quiz_done.html', final_level=final_level_str, final_percentage=final_percentage, quiz_category=quiz_category, category_not_formatted=category_not_formatted)
-    return render_template('quiz.html', questions=questions, quiz_category=quiz_category, quiz_done=quiz_done)
+            return render_template('quiz_done.html', page_title=page_title, final_level=final_level_str, final_percentage=final_percentage, quiz_category=quiz_category, category_not_formatted=category_not_formatted)
+    return render_template('quiz.html', page_title=page_title, questions=questions, quiz_category=quiz_category, quiz_done=quiz_done)
 
 @app.route('/exercises/<string:category>')
 @app.route('/exercises/<string:category>/<int:id_exercise>')
@@ -197,7 +203,7 @@ def exercises(category=None, id_exercise=None):
         subproblem_data = (input_description, output_description, observations, notes_examples)
         cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
         tests_cases_data = cursor.fetchall()
-        return render_template('exercise.html', url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
+        return render_template('exercise.html', page_title=title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category)
     else:
         cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
         
@@ -219,7 +225,9 @@ def exercises(category=None, id_exercise=None):
             score = 0 if score == None else round(score, 2)
             exercises.append([_id, title, level, score])
 
-        return render_template('exercises.html', exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
+        page_title = 'Ejercicios ' + categories[category_index][1]
+
+        return render_template('exercises.html', page_title=page_title, exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
 
 @app.route('/api/submit', methods=['POST'])
 def submit():
@@ -258,7 +266,6 @@ def submit():
         data["submissions"].append(payload)
         additional_data.append([feedback, bool(sample)])
 
-
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.90 Safari/537.36'}
         response = requests.post(url_judge0 + '/submissions/batch', json=data, headers=headers)
@@ -271,9 +278,11 @@ def submit():
         
         fields = 'stdin,stdout,stderr,status,status_id,token,expected_output'
 
+        print(tokens)
+
         while True:
-            response = requests.get(url_judge0 + '/submissions/batch?tokens=' + tokens_str + '&base64_encoded=false&fields=' + fields)
-            data = response.json()["submissions"]
+            response = requests.get(url_judge0 + '/submissions/batch?tokens=' + tokens_str + '&base64_encoded=true&fields=' + fields)
+            data = response.json()['submissions']
             cont = 0
             for i in range(len(data)):
                 status_id = data[i]['status_id']
@@ -454,9 +463,16 @@ def submit():
             'give_feedback': give_feedback
         }
 
+        for item in dicc['submissions']:
+            item['stdin'] = modified_b64decode(item['stdin'])
+            item['expected_output'] = modified_b64decode(item['expected_output'])
+            item['stdout'] = modified_b64decode(item['stdout'])
+
+        print(type(dicc))
+
         return dicc, 200
     except Exception as e:
-        print(e)
+        print(repr(e))
         return 'Judgment error', 400
 
 @app.route('/api/submit-feedback', methods=['POST'])

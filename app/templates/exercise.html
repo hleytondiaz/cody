@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Ejercicio{% endblock %}
+{% block title %}
+	{{ page_title }}
+{% endblock %}
 
 {% block body %}
 	<div class="card mb-4">
@@ -66,6 +68,7 @@
 	<div class="my-4">
 		<div id="editor" style="min-height: 400px; border: 1px solid rgba(0,0,0,.125);"></div>
 		<input type="hidden" id="id_problem" value={{ problem_data[0] }}>
+		<span id="validation" class="text-danger fw-bold">El código debe tener al menos 10 caracteres.</span>
 	</div>
 	<div class="mb-4" style="text-align: right;">
 		<a class="btn btn-light" role="button" href={{ url_for('exercises', category=category) }}>Volver</a>
@@ -122,6 +125,7 @@
 			$("div.card table").addClass("table table-bordered");
 			$("div.card img").addClass("mx-auto d-block");
 			$("#div-submit-feedback").attr("hidden", true);
+			$("#validation").attr("hidden", true);
 		});
 
 		renderMathInElement(
@@ -149,104 +153,109 @@
 		$("#submit").click(function() {
 			var idProblem = document.getElementById("id_problem").value;
 			var sourceCode = editor.getValue();
-			$.ajax({
-				url: window.location.origin + '/api/submit',
-				data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
-				type: 'POST',
-				contentType: 'application/json',
-				dataType: 'json',
-				beforeSend: function() {
-					$("#loader").attr("hidden", false);
-					$("#submit").attr("disabled", true);
-					$("#verdict").empty();
-					$("#results").empty();
-				},
-				success : function(json) {
-					//console.log(json);
-					let verdictDetails = json['details'];
-					console.log(verdictDetails);
-					if (verdictDetails['percentage_correct'] == 0) {
-						$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
-					} else if (verdictDetails['percentage_correct'] < 100) {
-						$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
-					} else {
-						$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
-					}
-
-					$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
-
-					let message = '';
-
-					if (verdictDetails['progress'] == -2) {
-						message = 'Debido a tus constantes intentos fallidos, tu distribución de ejercicios ha cambiado.';
-					} else if (verdictDetails['progress'] == -1) {
-						message = 'Debido a tus intentos fallidos, has retrocedido de nivel.';
-					} else if (verdictDetails['progress'] == 0) {
-						message = 'Por ahora te mantendrás en el mismo nivel actual.';
-					} else if (verdictDetails['progress'] == 1) {
-						message = 'Has avanzado al siguiente nivel.'
-					} else if (verdictDetails['progress'] == 2) {
-						message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
-					} else {
-						message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
-					}
-
-					$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
-
-					if (verdictDetails['give_feedback'] == 1) {
-						$("#div-submit-feedback").attr("hidden", false);
-					}
-
-					$("#results").append('<div class="card mb-4" id="card-results"></div>');
-					$("#card-results").append('<h5 class="card-header">Resultados</h5>');
-					$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
-					let arr = json['submissions'];
-					for (let i = 1; i <= arr.length; i++) {
-						$("#card-body-results").append('<div id="test-case-' + i.toString() + '"></div>');
-						$("#test-case-" + i.toString()).append('<div class="table-responsive" id="tb-rpsv-' + i.toString() + '"></div>');
-						$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
-						
-						color = arr[i - 1]['status_id'] == 3 ? 'text-success' : 'text-danger';
-						lock = arr[i - 1]['sample'] ? '' : '<i class="bi bi-lock-fill"></i>';
-
-						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + lock + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
-						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
-						
-						if (arr[i - 1]['sample']) {
-							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
-						}
-						
-						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
-						
-						if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
-							output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
-							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
-						}
-						
-						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida esperada</td></tr>');
-						
-						if (arr[i - 1]['sample']) {
-							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
+			if (sourceCode.trim().length > 0) {
+				$.ajax({
+					url: window.location.origin + '/api/submit',
+					data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
+					type: 'POST',
+					contentType: 'application/json',
+					dataType: 'json',
+					beforeSend: function() {
+						$("#loader").attr("hidden", false);
+						$("#submit").attr("disabled", true);
+						$("#validation").attr("hidden", true);
+						$("#verdict").empty();
+						$("#results").empty();
+					},
+					success : function(json) {
+						let verdictDetails = json['details'];
+						console.log(verdictDetails);
+						if (verdictDetails['percentage_correct'] == 0) {
+							$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
+						} else if (verdictDetails['percentage_correct'] < 100) {
+							$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
+						} else {
+							$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
 						}
 
-						if (arr[i - 1]['feedback'] !== null) {
-							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
-							$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['feedback'] + '</pre></td></tr>');
+						$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
+
+						let message = '';
+
+						if (verdictDetails['progress'] == -2) {
+							message = 'Debido a tus constantes intentos fallidos, tu distribución de ejercicios ha cambiado.';
+						} else if (verdictDetails['progress'] == -1) {
+							message = 'Debido a tus intentos fallidos, has retrocedido de nivel.';
+						} else if (verdictDetails['progress'] == 0) {
+							message = 'Por ahora te mantendrás en el mismo nivel actual.';
+						} else if (verdictDetails['progress'] == 1) {
+							message = 'Has avanzado al siguiente nivel.'
+						} else if (verdictDetails['progress'] == 2) {
+							message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
+						} else {
+							message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
 						}
-						//$("tb-" + i.toString()).append('');
+
+						$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
+
+						if (verdictDetails['give_feedback'] == 1) {
+							$("#div-submit-feedback").attr("hidden", false);
+						}
+
+						$("#results").append('<div class="card mb-4" id="card-results"></div>');
+						$("#card-results").append('<h5 class="card-header">Resultados</h5>');
+						$("#card-results").append('<div class="card-body" id="card-body-results"></div>');
+						let arr = json['submissions'];
+						for (let i = 1; i <= arr.length; i++) {
+							$("#card-body-results").append('<div id="test-case-' + i.toString() + '"></div>');
+							$("#test-case-" + i.toString()).append('<div class="table-responsive" id="tb-rpsv-' + i.toString() + '"></div>');
+							$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
+							
+							color = arr[i - 1]['status_id'] == 3 ? 'text-success' : 'text-danger';
+							lock = arr[i - 1]['sample'] ? '' : '<i class="bi bi-lock-fill"></i>';
+
+							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Caso &#35;' + i.toString() + lock + '<div class="' + color + '" style="float: right; display: inline-block;">' + arr[i - 1]['status']['description'] + '</div></td></tr>');
+							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
+							
+							if (arr[i - 1]['sample']) {
+								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
+							}
+							
+							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
+							
+							if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
+								output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
+								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
+							}
+							
+							$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida esperada</td></tr>');
+							
+							if (arr[i - 1]['sample']) {
+								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
+							}
+
+							if (arr[i - 1]['feedback'] !== null) {
+								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
+								$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['feedback'] + '</pre></td></tr>');
+							}
+							//$("tb-" + i.toString()).append('');
+						}
+					},
+					error : function(xhr, status) {
+						console.log('Error');
+					},
+					complete : function(xhr, status) {
+						$("#loader").attr("hidden", true);
+						$("#submit").attr("disabled", false);
+						$("html, body").animate({
+							scrollTop: $("#verdict").offset().top
+						});
 					}
-				},
-				error : function(xhr, status) {
-					console.log('Error');
-				},
-				complete : function(xhr, status) {
-					$("#loader").attr("hidden", true);
-					$("#submit").attr("disabled", false);
-					$("html, body").animate({
-						scrollTop: $("#verdict").offset().top
-					});
-				}
-			});
+				});
+			} else {
+				$("#validation").attr("hidden", false);
+				editor.focus();
+			}
 		});
 
 		$("#submit-feedback").click(function() {
