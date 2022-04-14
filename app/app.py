@@ -152,11 +152,11 @@ def quiz(category=None):
                 final_level_int = 1
                 distribution[0] += 1
             elif total_score < 0.66:
-                final_level = 'MEDIO'
+                final_level_str = 'MEDIO'
                 final_level_int = 2
                 distribution[1] += 1
             else:
-                final_level = 'AVANZADO'
+                final_level_str = 'AVANZADO'
                 final_level_int = 3
                 distribution[2] += 1
             
@@ -185,11 +185,18 @@ def quiz(category=None):
 @app.route('/exercises/<string:category>')
 @app.route('/exercises/<string:category>/<int:id_exercise>')
 def exercises(category=None, id_exercise=None):
+    if  category not in [cat[0] for cat in categories]:
+        return 'La categoría a la que intentas acceder no existe.'
+
     conn = mysql.connect()
     cursor = conn.cursor()
     category_index = get_category_index(categories, category)
     quiz_attempted = check_quiz_attempted(cursor, session['user'], category_index)
+    
     if category and id_exercise:
+        cursor.execute('SELECT COUNT(*) FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_exercise })
+        if not cursor.fetchone()[0]:
+            return 'No existe ningún problema asociado al ID indicado.'
         cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
         problem_allowed = id_exercise in cursor.fetchone()
         cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
@@ -250,6 +257,14 @@ def submit():
 
     conn = mysql.connect()
     cursor = conn.cursor()
+
+    cursor.execute('SELECT category FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_problem })
+    category_index = cursor.fetchone()
+
+    cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
+
+    if int(id_problem) not in cursor.fetchone():
+        return 'This problem does not belong to your current problem distribution', 400
 
     cursor.execute('SELECT id_test_case, stdin, expected_output, feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
     
@@ -509,6 +524,19 @@ def submit_feedback():
             return { 'message': 'no_ok' }, 200
     else:
         return { 'message': 'no_ok' }, 200
+
+@app.route('/submissions', methods=['GET'])
+def submissions():
+    page_title = 'Envíos'
+    submissions = []
+    logged_in = False
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute('SELECT submission_2.id_submission, problems.title, submission_2.score, submission_2.datetime FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC;', { 'email': session['user'] })
+        submissions = cursor.fetchall()
+        logged_in = True
+    return render_template('submissions.html', page_title=page_title, submissions=submissions, logged_in=logged_in)
 
 @app.route('/launch', methods=['POST'])
 @lti(request='initial', role='any', app=app)

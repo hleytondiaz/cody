@@ -15,19 +15,35 @@
 					<img src="{{ url_for('static', filename='logo-navbar.png') }}" width="30" height="30" class="d-inline-block align-top" alt="">
 					step-by-step
 				</a>
-				<div class="d-flex">
-					{% if session['user'] %}
-						<div class="btn-group">
-							<button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Cuenta</button>
-							<ul class="dropdown-menu">
-								<!--
-								<li><a class="dropdown-item" href="#">Envíos</a></li>
-								<li><hr class="dropdown-divider"></li>
-								-->
-								<li><a class="dropdown-item" href={{ url_for('logout') }}>Salir</a></li>
-							</ul>
-						</div>
-					{% endif %}
+				<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+					<span class="navbar-toggler-icon"></span>
+				</button>
+				<div class="collapse navbar-collapse" id="navbarSupportedContent">
+					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+						<li class="nav-item">
+							<a class="nav-link active" href="#">Inicio</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link active" href="#">Progreso</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link active" href="#">Envíos</a>
+						</li>
+					</ul>
+					<div class="d-flex">
+						{% if session['user'] %}
+							<div class="btn-group">
+								<button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Cuenta</button>
+								<ul class="dropdown-menu">
+									<!--
+									<li><a class="dropdown-item" href="#">Envíos</a></li>
+									<li><hr class="dropdown-divider"></li>
+									-->
+									<li><a class="dropdown-item" href={{ url_for('logout') }}>Salir</a></li>
+								</ul>
+							</div>
+						{% endif %}
+					</div>
 				</div>
 			</div>
 		</nav>

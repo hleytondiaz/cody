@@ -42,7 +42,7 @@
 								</tr>
 								<tr>
 									<td class="bg-light">
-										<pre class="mb-0">{{ item[0] }}</pre>
+										<pre class="mb-0">{{ item[0] if item[0] | length > 0 else " " }}</pre>
 									</td>
 								</tr>
 								<tr>
@@ -50,7 +50,7 @@
 								</tr>
 								<tr>
 									<td class="bg-light">
-										<pre class="mb-0">{{ item[1] }}</pre>
+										<pre class="mb-0">{{ item[1] if item[1] | length > 0 else " " }}</pre>
 									</td>
 								</tr>
 							</tbody>
