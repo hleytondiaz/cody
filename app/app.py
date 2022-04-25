@@ -525,18 +525,73 @@ def submit_feedback():
     else:
         return { 'message': 'no_ok' }, 200
 
-@app.route('/submissions', methods=['GET'])
-def submissions():
-    page_title = 'Envíos'
-    submissions = []
-    logged_in = False
+@app.route('/api/submissions/<int:id_submission>', methods=['GET'])
+def get_submission(id_submission=None):
     if 'user' in session:
         conn = mysql.connect()
         cursor = conn.cursor()
-        cursor.execute('SELECT submission_2.id_submission, problems.title, submission_2.score, submission_2.datetime FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC;', { 'email': session['user'] })
+        cursor.execute('SELECT email, id_problem, source_code, tokens FROM submission_2 WHERE id_submission=%(id_pro)s;', { 'id_pro': id_submission})
+        data = cursor.fetchone()
+        dicc = {}
+        if data != None:
+            email, id_problem, source_code, tokens_str = data
+            cursor.execute('SELECT feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
+            test_cases = [t for t in cursor.fetchall()]
+            if email == session['user']:
+                dicc['source_code'] = source_code
+                dicc['test_cases'] = []
+                fields = 'stdin,stdout,stderr,status,expected_output'
+                response = requests.get(url_judge0 + '/submissions/batch?tokens=' + tokens_str + '&base64_encoded=true&fields=' + fields)
+                data = response.json()['submissions']
+                i = 0
+                for submission in data:
+                    test = {}
+                    if test_cases[i][1] == 1:
+                        test['stdin'] = modified_b64decode(submission['stdin'])
+                        test['expected_output'] = modified_b64decode(submission['expected_output'])
+                        test['stdout'] = modified_b64decode(submission['stdout'])
+                    
+                    test['stderr'] = submission['stderr']
+                    test['status_id'] = submission['status']['id']
+                    test['status_description'] = submission['status']['description']
+                    test['feedback'], test['sample'] = test_cases[i]
+                    dicc['test_cases'].append(test)
+                    i += 1
+                return dicc, 200
+            else:
+                return { 'message': 'You do not have authorization' }, 400
+        else:
+            return { 'message': 'ID does not exist' }, 400
+    else:
+        return { 'message': 'The user is not logged in' }, 400
+
+@app.route('/submissions', methods=['GET'])
+@app.route('/submissions/<int:page>', methods=['GET'])
+def submissions(page=None):
+    page_title = 'Envíos'
+    submissions = []
+    logged_in = False
+    
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC;', { 'email': session['user'] })
+        submissions_length = cursor.fetchone()[0]
+        submissions_per_page = 100
+        offset = 0
+        max_pages = int(submissions_length / submissions_per_page) + 1
+
+        if page != None:
+            if page >= 1 and page <= max_pages:
+                offset = submissions_per_page * (page - 1)
+            else:
+                return redirect(url_for('submissions'))
+
+        cursor.execute('SELECT submission_2.id_submission, problems.title, submission_2.score, submission_2.datetime FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC LIMIT %(lim)s OFFSET %(off)s;', { 'email': session['user'], 'lim': submissions_per_page, 'off': offset })
         submissions = cursor.fetchall()
         logged_in = True
-    return render_template('submissions.html', page_title=page_title, submissions=submissions, logged_in=logged_in)
+        current_page = 1 if page == None else page
+    return render_template('submissions.html', page_title=page_title, submissions=submissions, logged_in=logged_in, current_page=current_page, max_pages=max_pages)
 
 @app.route('/launch', methods=['POST'])
 @lti(request='initial', role='any', app=app)
