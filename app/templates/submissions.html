@@ -62,9 +62,7 @@
 				<h5 class="modal-title" id="exampleModalLabel">Envío</h5>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
-			<div class="modal-body">
-				
-			</div>
+			<div class="modal-body"></div>
 		</div>
 	</div>
 </div>
@@ -72,36 +70,36 @@
 
 {% block additional_css %}
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/default.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 {% endblock %}
 
 {% block additional_javascript %}
-	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
-	<script type="text/javascript">
-		var exampleModal = document.getElementById('exampleModal')
-		exampleModal.addEventListener('show.bs.modal', function (event) {
-			var button = event.relatedTarget;
-			var idSubmission = button.getAttribute('data-id-submission');
-			var modalTitle = exampleModal.querySelector('.modal-title');
-			modalTitle.textContent = 'Envío #' + idSubmission;
-			$.ajax({
-				url: window.location.origin + '/api/submissions/' + idSubmission.toString(),
-				type: 'GET',
-				contentType: 'application/json',
-				dataType: 'json',
-				timeout: 3000,
-				beforeSend: function() {
-					$(".modal-body").empty();
-					$('.modal-body').append('<div class="d-flex align-items-center"><strong>Cargando...</strong><div class="spinner-border spinner-border-sm ms-auto text-secondary" role="status" aria-hidden="true"></div></div>');
-				},
-				success : function(json) {
-					let sourceCode = json['source_code'];
-					let arr = json['test_cases'];
-					$(".modal-body").empty();
-					$('.modal-body').append('<pre><code class="language-python">' + sourceCode + '</code></pre>');
-					hljs.highlightAll();
-					console.log(arr);
-					let i = 1;
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+<script type="text/javascript">
+	var exampleModal = document.getElementById('exampleModal')
+	exampleModal.addEventListener('show.bs.modal', function (event) {
+		var button = event.relatedTarget;
+		var idSubmission = button.getAttribute('data-id-submission');
+		var modalTitle = exampleModal.querySelector('.modal-title');
+		modalTitle.textContent = 'Envío #' + idSubmission;
+		$.ajax({
+			url: window.location.origin + '/api/submissions/' + idSubmission.toString(),
+			type: 'GET',
+			contentType: 'application/json',
+			dataType: 'json',
+			timeout: 3000,
+			beforeSend: function() {
+				$(".modal-body").empty();
+				$('.modal-body').append('<div class="d-flex align-items-center"><strong>Cargando...</strong><div class="spinner-border spinner-border-sm ms-auto text-secondary" role="status" aria-hidden="true"></div></div>');
+			},
+			success : function(json) {
+				let sourceCode = json['source_code'];
+				let arr = json['test_cases'];
+				$(".modal-body").empty();
+				$('.modal-body').append('<pre><code class="language-python">' + sourceCode + '</code></pre>');
+				hljs.highlightAll();
+				for (let i = 1; i <= arr.length; i++) {
 					$('.modal-body').append('<div id="test-case-' + i.toString() + '"></div>');
 					$("#test-case-" + i.toString()).append('<div class="table-responsive" id="tb-rpsv-' + i.toString() + '"></div>');
 					$("#tb-rpsv-" + i.toString()).append('<table class="table table-sm table-bordered" style="font-size: 14px;"><tbody id="tb-' + i.toString() + '"></tbody></table>');
@@ -113,13 +111,15 @@
 					$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
 
 					if (arr[i - 1]['sample']) {
-						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
+						let input = arr[i - 1]['stdin'].length > 0 ? arr[i - 1]['stdin'] : ' ';
+						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + input + '</pre></td></tr>');
 					}
 
 					$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
 								
 					if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
 						output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
+						if (output === null) output = ' ';
 						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
 					}
 					
@@ -129,18 +129,19 @@
 						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
 					}
 
-					if (arr[i - 1]['feedback'] !== null) {
+					if (arr[i - 1]['feedback'].length > 0) {
 						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
-						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['feedback'] + '</pre></td></tr>');
+						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><p class="mb-0">' + arr[i - 1]['feedback'] + '</p></td></tr>');
 					}
-				},
-				error : function(xhr, status) {
-					$(".modal-body").empty();
-					$('.modal-body').append('No fue posible obtener tu código. Intenta más tarde.');
-				},
-				complete : function(xhr, status) {
 				}
-			});
+			},
+			error : function(xhr, status) {
+				$(".modal-body").empty();
+				$('.modal-body').append('No fue posible obtener tu código. Intenta más tarde.');
+			},
+			complete : function(xhr, status) {
+			}
 		});
-	</script>
+	});
+</script>
 {% endblock %}

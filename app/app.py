@@ -13,6 +13,7 @@ from pylti.flask import lti
 from dotenv import load_dotenv
 from dotenv import find_dotenv
 from base64 import b64decode
+from flask_apscheduler import APScheduler
 import markdown
 import requests
 import settings
@@ -23,6 +24,7 @@ load_dotenv(find_dotenv())
 app = Flask(__name__)
 mysql = MySQL()
 cors = CORS(app, resources={r'/api/*': {'origins': '*'}})
+scheduler = APScheduler()
 
 app.config['MYSQL_DATABASE_HOST'] = os.environ.get('MYSQL_DATABASE_HOST')
 app.config['MYSQL_DATABASE_PORT'] = int(os.environ.get('MYSQL_DATABASE_PORT'))
@@ -201,14 +203,14 @@ def exercises(category=None, id_exercise=None):
         problem_allowed = id_exercise in cursor.fetchone()
         cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
         id_problem, title, statement = cursor.fetchone()
-        html = markdown.markdown(statement, extensions=['tables'])
+        html = markdown.markdown(statement, extensions=['tables', 'fenced_code'])
         problem_data = (id_problem, title, html)
         cursor.execute('SELECT input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
         input_description, output_description, observations, notes_examples = cursor.fetchone()
-        input_description = markdown.markdown(input_description, extensions=['tables'])
-        output_description = markdown.markdown(output_description, extensions=['tables'])
-        observations = markdown.markdown(observations, extensions=['tables'])
-        notes_examples = markdown.markdown(notes_examples, extensions=['tables'])
+        input_description = markdown.markdown(input_description, extensions=['tables', 'fenced_code'])
+        output_description = markdown.markdown(output_description, extensions=['tables', 'fenced_code'])
+        observations = markdown.markdown(observations, extensions=['tables', 'fenced_code'])
+        notes_examples = markdown.markdown(notes_examples, extensions=['tables', 'fenced_code'])
         subproblem_data = (input_description, output_description, observations, notes_examples)
         cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
         tests_cases_data = cursor.fetchall()
@@ -254,6 +256,7 @@ def submit():
 
     id_problem = body['id_problem']
     source_code = body['source_code']
+    source_code_to_judge = source_code
 
     conn = mysql.connect()
     cursor = conn.cursor()
@@ -266,6 +269,12 @@ def submit():
     if int(id_problem) not in cursor.fetchone():
         return 'This problem does not belong to your current problem distribution', 400
 
+    cursor.execute('SELECT additional_code_below FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1', { 'id_pro': id_problem })
+    additional_code_below = cursor.fetchone()[0]
+
+    if len(additional_code_below) > 0:
+        source_code_to_judge += '\n\n' + additional_code_below
+
     cursor.execute('SELECT id_test_case, stdin, expected_output, feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
     
     tests_cases = cursor.fetchall()
@@ -277,7 +286,7 @@ def submit():
         _, stdin, expected_output, feedback, sample = tests_cases[i]
         payload = {
             "language_id": 71,
-            "source_code": source_code,
+            "source_code": source_code_to_judge,
             "stdin": stdin,
             "expected_output": expected_output
         }
@@ -483,8 +492,7 @@ def submit():
             item['stdin'] = modified_b64decode(item['stdin'])
             item['expected_output'] = modified_b64decode(item['expected_output'])
             item['stdout'] = modified_b64decode(item['stdout'])
-
-        print(type(dicc))
+            item['stderr'] = modified_b64decode(item['stderr'])
 
         return dicc, 200
     except Exception as e:
@@ -551,7 +559,7 @@ def get_submission(id_submission=None):
                         test['expected_output'] = modified_b64decode(submission['expected_output'])
                         test['stdout'] = modified_b64decode(submission['stdout'])
                     
-                    test['stderr'] = submission['stderr']
+                    test['stderr'] = modified_b64decode(submission['stderr'])
                     test['status_id'] = submission['status']['id']
                     test['status_description'] = submission['status']['description']
                     test['feedback'], test['sample'] = test_cases[i]
@@ -564,6 +572,12 @@ def get_submission(id_submission=None):
             return { 'message': 'ID does not exist' }, 400
     else:
         return { 'message': 'The user is not logged in' }, 400
+
+@app.route('/api/update_problem_level', methods=['POST'])
+def update_problem_level():
+    # curl -X POST 127.0.0.1:5000/api/update_problem_level
+    
+    return { 'message': 'Hello World' }, 200
 
 @app.route('/submissions', methods=['GET'])
 @app.route('/submissions/<int:page>', methods=['GET'])
@@ -604,6 +618,17 @@ def logout():
     session.pop('user', None)
     return redirect(url_for('index'))
 
-@app.route('/helloworld', methods=['GET'])
-def helloworld():
-    return "<h1>Hello World!</h1>"
+def scheduled_task():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id_problem, AVG(level) FROM feedback WHERE status=1 GROUP BY id_problem;')
+    for id_problem, avg in cursor.fetchall():
+        new_level = int(round(avg))
+        cursor.execute('UPDATE problems SET level=%(lvl)s WHERE id_problem=%(id_pro)s;', { 'lvl': new_level, 'id_pro': id_problem })
+        conn.commit()
+    cursor.execute('UPDATE feedback SET status=0 WHERE status=1')
+    conn.commit()
+    print('This test runs every 3 seconds.')
+
+scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
+scheduler.start()
