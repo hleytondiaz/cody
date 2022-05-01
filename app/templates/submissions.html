@@ -74,7 +74,6 @@
 {% endblock %}
 
 {% block additional_javascript %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
 <script type="text/javascript">
 	var exampleModal = document.getElementById('exampleModal')
@@ -129,11 +128,12 @@
 						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
 					}
 
-					if (arr[i - 1]['feedback'].length > 0) {
+					if (arr[i - 1]['feedback'].length > 0 && arr[i - 1]['status_id'] != 3) {
 						$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Retroalimentación</td></tr>');
 						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><p class="mb-0">' + arr[i - 1]['feedback'] + '</p></td></tr>');
 					}
 				}
+				console.log(arr);
 			},
 			error : function(xhr, status) {
 				$(".modal-body").empty();

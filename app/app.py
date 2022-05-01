@@ -73,32 +73,8 @@ def modified_b64decode(string):
 
 @app.route('/')
 def index():
-    conn = mysql.connect()
-    cursor = conn.cursor()
-    progress_list = []
-    disablements = []
-    progress = []
-    for i in range(1, len(categories) + 1):
-        if 'user'in session:
-            # obtener nivel (basico, medio, alto) de la categoria
-            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': i })
-            details = cursor.fetchone()
-            level = 0
-            mean = 0.0
-            if details != None:
-                problem_ids = [x for x in details[1:]]
-                level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 = details
-                sum_ = 0
-                for id_problem in problem_ids:
-                    cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=1;', { 'id_pro': id_problem, 'email': session['user'] })
-                    score = cursor.fetchone()[0]
-                    score = 0.0 if score == None else score
-                    sum_ += 1.0 if score == 100 else 0.0
-                mean = round((sum_ / 4) * 100, 2)
-            progress.append([level, mean])
-            disablements.append(check_quiz_attempted(cursor, session['user'], i))
     page_title = 'Inicio'
-    return render_template('index.html', page_title=page_title, categories=categories, disablements=disablements, progress=progress)
+    return render_template('index.html', page_title=page_title)
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
@@ -184,62 +160,132 @@ def quiz(category=None):
             return render_template('quiz_done.html', page_title=page_title, final_level=final_level_str, final_percentage=final_percentage, quiz_category=quiz_category, category_not_formatted=category_not_formatted)
     return render_template('quiz.html', page_title=page_title, questions=questions, quiz_category=quiz_category, quiz_done=quiz_done)
 
+@app.route('/exercises')
 @app.route('/exercises/<string:category>')
 @app.route('/exercises/<string:category>/<int:id_exercise>')
 def exercises(category=None, id_exercise=None):
-    if  category not in [cat[0] for cat in categories]:
-        return 'La categoría a la que intentas acceder no existe.'
-
     conn = mysql.connect()
     cursor = conn.cursor()
-    category_index = get_category_index(categories, category)
-    quiz_attempted = check_quiz_attempted(cursor, session['user'], category_index)
     
-    if category and id_exercise:
-        cursor.execute('SELECT COUNT(*) FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_exercise })
-        if not cursor.fetchone()[0]:
-            return 'No existe ningún problema asociado al ID indicado.'
-        cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
-        problem_allowed = id_exercise in cursor.fetchone()
-        cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
-        id_problem, title, statement = cursor.fetchone()
-        html = markdown.markdown(statement, extensions=['tables', 'fenced_code'])
-        problem_data = (id_problem, title, html)
-        cursor.execute('SELECT input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
-        input_description, output_description, observations, notes_examples = cursor.fetchone()
-        input_description = markdown.markdown(input_description, extensions=['tables', 'fenced_code'])
-        output_description = markdown.markdown(output_description, extensions=['tables', 'fenced_code'])
-        observations = markdown.markdown(observations, extensions=['tables', 'fenced_code'])
-        notes_examples = markdown.markdown(notes_examples, extensions=['tables', 'fenced_code'])
-        subproblem_data = (input_description, output_description, observations, notes_examples)
-        cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
-        tests_cases_data = cursor.fetchall()
-        page_title = title if problem_allowed else 'Error'
-        return render_template('exercise.html', page_title=page_title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category, problem_allowed=problem_allowed)
+    if category == None:
+        if id_exercise == None:
+            progress_list = []
+            disablements = []
+            progress = []
+            for i in range(1, len(categories) + 1):
+                if 'user'in session:
+                    # obtener nivel (basico, medio, alto) de la categoria
+                    cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': i })
+                    details = cursor.fetchone()
+                    level = 0
+                    mean = 0.0
+                    if details != None:
+                        problem_ids = [x for x in details[1:]]
+                        level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 = details
+                        sum_ = 0
+                        for id_problem in problem_ids:
+                            cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=1;', { 'id_pro': id_problem, 'email': session['user'] })
+                            score = cursor.fetchone()[0]
+                            score = 0.0 if score == None else score
+                            sum_ += 1.0 if score == 100 else 0.0
+                        mean = round((sum_ / 4) * 100, 2)
+                    progress.append([level, mean])
+                    disablements.append(check_quiz_attempted(cursor, session['user'], i))
+            page_title = 'Inicio'
+            return render_template('categories.html', page_title=page_title, categories=categories, disablements=disablements, progress=progress)
     else:
-        cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
+        if category not in [cat[0] for cat in categories]:
+            return 'La categoría a la que intentas acceder no existe.'
+
+        category_index = get_category_index(categories, category)
+        quiz_attempted = check_quiz_attempted(cursor, session['user'], category_index)
         
-        problem_ids = cursor.fetchall()
-        exercises = []
+        if id_exercise == None:
+            cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4, (SELECT title FROM problems WHERE problems.id_problem=id_problem_1) AS title_1, (SELECT title FROM problems WHERE problems.id_problem=id_problem_2) AS title_2, (SELECT title FROM problems WHERE problems.id_problem=id_problem_3) AS title_3, (SELECT title FROM problems WHERE problems.id_problem=id_problem_4) AS title_4, (SELECT level FROM problems WHERE problems.id_problem=id_problem_1) AS level_1, (SELECT level FROM problems WHERE problems.id_problem=id_problem_2) AS level_2, (SELECT level FROM problems WHERE problems.id_problem=id_problem_3) AS level_3, (SELECT level FROM problems WHERE problems.id_problem=id_problem_4) AS level_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
+        
+            problem_ids = cursor.fetchall()
+            exercises = []
 
-        for i in range(4):
-            _id = problem_ids[0][i]
-            title = problem_ids[0][i + 4]
-            level = ''
-            if problem_ids[0][i + 8] == 1:
-                level = 'FÁCIL'
-            elif problem_ids[0][i + 8] == 2:
-                level = 'MEDIO'
-            else:
-                level = 'DIFÍCIL'
-            cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': _id, 'email': session['user'] })
-            score = cursor.fetchone()[0]
-            score = 0 if score == None else round(score, 2)
-            exercises.append([_id, title, level, score])
+            for i in range(4):
+                _id = problem_ids[0][i]
+                title = problem_ids[0][i + 4]
+                level = ''
+                if problem_ids[0][i + 8] == 1:
+                    level = 'FÁCIL'
+                elif problem_ids[0][i + 8] == 2:
+                    level = 'MEDIO'
+                else:
+                    level = 'DIFÍCIL'
+                cursor.execute('SELECT MAX(score) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': _id, 'email': session['user'] })
+                score = cursor.fetchone()[0]
+                score = 0 if score == None else round(score, 2)
+                exercises.append([_id, title, level, score])
 
-        page_title = 'Ejercicios ' + categories[category_index][1]
+            page_title = 'Ejercicios ' + categories[category_index][1]
 
-        return render_template('exercises.html', page_title=page_title, exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
+            return render_template('exercises.html', page_title=page_title, exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
+        else:
+            cursor.execute('SELECT COUNT(*) FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_exercise })
+            if not cursor.fetchone()[0]:
+                return 'No existe ningún problema asociado al ID indicado.'
+            cursor.execute('SELECT id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC LIMIT 1;', { 'email': session['user'], 'cat': category_index })
+            problem_allowed = id_exercise in cursor.fetchone()
+            cursor.execute('SELECT id_problem, title, statement FROM problems WHERE id_problem = %(id_pro)s AND category = %(cat)s;', { 'id_pro': id_exercise, 'cat': category_index })
+            id_problem, title, statement = cursor.fetchone()
+            html = markdown.markdown(statement, extensions=['tables', 'fenced_code'])
+            problem_data = (id_problem, title, html)
+            cursor.execute('SELECT input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
+            input_description, output_description, observations, notes_examples = cursor.fetchone()
+            input_description = markdown.markdown(input_description, extensions=['tables', 'fenced_code'])
+            output_description = markdown.markdown(output_description, extensions=['tables', 'fenced_code'])
+            observations = markdown.markdown(observations, extensions=['tables', 'fenced_code'])
+            notes_examples = markdown.markdown(notes_examples, extensions=['tables', 'fenced_code'])
+            subproblem_data = (input_description, output_description, observations, notes_examples)
+            cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
+            tests_cases_data = cursor.fetchall()
+            page_title = title if problem_allowed else 'Error'
+            return render_template('exercise.html', page_title=page_title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category, problem_allowed=problem_allowed)
+
+@app.route('/progress', methods=['GET'])
+def progress():
+    page_title = 'Progreso'
+    return render_template('progress.html', page_title=page_title)
+
+@app.route('/profile', methods=['GET'])
+def profile():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id_user=%(user)s', { 'user': session['user'] })
+    profile_data = [x for x in cursor.fetchall()[0]]
+    profile_data.append('Estudiante' if session['role'] == 'learner' else 'Profesor')
+    cursor.execute('SELECT id_group FROM groups ORDER BY id_group ASC')
+    groups = [x[0] for x in cursor.fetchall()]
+    print(groups)
+    page_title = 'Perfil'
+    return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups)
+
+@app.route('/admin/<string:option>', methods=['GET'])
+def admin(option=None):
+    if option == 'exercises':
+        return render_template('exercises_admin.html')
+    if option == 'groups':
+        return render_template('groups.html')
+
+@app.route('/api/update_group', methods=['POST'])
+def update_group():
+    body = request.get_json()
+    if body is None:
+        return 'The request body is null', 400
+    if 'group' not in body:
+        return 'You need to specify the group', 400
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET id_group=%(group)s WHERE id_user=%(user)s', { 'group': body['group'], 'user': session['user'] })
+        conn.commit()
+        return { 'message': 'ok' }, 200
+    else:
+        return { 'message': 'no_ok' }, 400
 
 @app.route('/api/submit', methods=['POST'])
 def submit():
@@ -573,12 +619,6 @@ def get_submission(id_submission=None):
     else:
         return { 'message': 'The user is not logged in' }, 400
 
-@app.route('/api/update_problem_level', methods=['POST'])
-def update_problem_level():
-    # curl -X POST 127.0.0.1:5000/api/update_problem_level
-    
-    return { 'message': 'Hello World' }, 200
-
 @app.route('/submissions', methods=['GET'])
 @app.route('/submissions/<int:page>', methods=['GET'])
 def submissions(page=None):
@@ -610,7 +650,22 @@ def submissions(page=None):
 @app.route('/launch', methods=['POST'])
 @lti(request='initial', role='any', app=app)
 def launch(lti=lti):
-    session['user'] = request.form.get('lis_person_contact_email_primary')
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    user = request.form.get('lis_person_contact_email_primary')
+    name = request.form.get('lis_person_name_given')
+    surname = request.form.get('lis_person_name_family')
+    cursor.execute('SELECT COUNT(*) FROM users WHERE id_user=%(user)s', { 'user': user })
+    if cursor.fetchone()[0] == 0:
+        insert_stmt = 'INSERT INTO users (id_user, name, surname, id_group, created_at, active) VALUES (%s, %s, %s, %s, %s, %s)'
+        data = (user, name, surname, 0, datetime.now(), True)
+        cursor.execute(insert_stmt, data)
+        conn.commit()
+    else:
+        cursor.execute('UPDATE users SET active=True WHERE id_user=%(user)s', { 'user': user })
+        conn.commit()
+    session['user'] = user
+    session['role'] = 'instructor' if 'Instructor' in request.form.get('roles').split(',') else 'learner'
     return redirect(url_for('index'))
 
 @app.route('/logout', methods=['GET'])
@@ -628,7 +683,6 @@ def scheduled_task():
         conn.commit()
     cursor.execute('UPDATE feedback SET status=0 WHERE status=1')
     conn.commit()
-    print('This test runs every 3 seconds.')
 
 scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
 scheduler.start()

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}
+	{{ page_title }}
+{% endblock %}
+
+{% block body %}
+<div class="row mb-4">
+	<div class="col-6">
+		<label for="names" class="form-label">Nombres</label>
+		<input type="text" class="form-control" id="names" value="{{ profile_data[1] }}" disabled>
+	</div>
+	<div class="col-6">
+		<label for="surnames" class="form-label">Apellidos</label>
+		<input type="text" class="form-control" id="surnames" value="{{ profile_data[2] }}" disabled>
+	</div>
+</div>
+<div class="row mb-4">
+	<div class="col-6">
+		<label for="email" class="form-label">Correo</label>
+		<input type="text" class="form-control" id="email" value="{{ profile_data[0] }}" disabled>
+	</div>
+	<div class="col-6">
+		<label for="created_at" class="form-label">Fecha de registro</label>
+		<input type="text" class="form-control" id="created_at" value="{{ profile_data[4].strftime('%d-%m-%Y') }}" disabled>
+	</div>
+</div>
+<div class="row">
+	<div class="col-6">
+		<label for="role" class="form-label">Tipo de cuenta</label>
+		<input type="text" class="form-control" id="role" value="{{ profile_data[6] }}" disabled>
+	</div>
+	<div class="col-6">
+		<label for="group" class="form-label">Paralelo</label>
+		<select id="group" class="form-select">
+			{% for g in groups %}
+			<option value="{{ g }}"{{ ' selected' if profile_data[3] == g else '' }}>
+				{{ 'Sin paralelo' if g == 0 else g }}
+			</option>
+			{% endfor %}
+		</select>
+	</div>
+</div>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+	<div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="d-flex">
+			<div class="toast-body"></div>
+			<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block additional_javascript %}
+<script type="text/javascript">
+	document.getElementById("group").onchange = changeListener;
+	function changeListener(){
+		var value = this.value;
+		var toastLiveExample = document.getElementById('liveToast');
+		var toast = new bootstrap.Toast(toastLiveExample);
+		$.ajax({
+			url: window.location.origin + '/api/update_group',
+			data: JSON.stringify({ group: value }),
+			type: 'POST',
+			contentType: 'application/json',
+			dataType: 'json',
+			timeout: 3000,
+			beforeSend: function() {
+			},
+			success : function(json) {
+				$('#liveToast').removeClass('bg-danger');
+				$('#liveToast').addClass('bg-success');
+				$('.toast-body').text('¡Muy bien! El paralelo fue asignado.');
+			},
+			error : function(xhr, status) {
+				$('#liveToast').removeClass('bg-success');
+				$('#liveToast').addClass('bg-danger');
+				$('.toast-body').text('¡Oh no! Inténtalo más tarde.');
+			},
+			complete : function(xhr, status) {
+				toast.show();
+			}
+		});
+	}
+</script>
+{% endblock %}

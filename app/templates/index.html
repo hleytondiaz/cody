@@ -5,56 +5,53 @@
 {% endblock %}
 
 {% block body %}
-	{% if session['user'] %}
-		<div class="table-responsive">
-			<table class="table table-bordered" style="vertical-align: middle;">
-				<thead class="table-light">
-					<th>Categoría</th>
-					<th>Nivel actual</th>
-					<th style="text-align: center;">Progreso</th>
-					<th style="text-align: center;">Opción</th>
-				</thead>
-				<tbody>
-					{% for i in range(8) %}
-					<tr>
-						<td>
-							{% if disablements[i] %}
-								<a href={{ url_for('exercises', category=categories[i][0]) }}>{{ categories[i][1] }}</a>
-							{% else %}
-								{{ categories[i][1] }}
-							{% endif %}
-						</td>
-						<td>
-							{% if progress[i][0] == 0 %}
-								No evaluado
-							{% elif progress[i][0] == 1 %}
-								Básico
-							{% elif progress[i][0] == 2 %}
-								Medio
-							{% else %}
-								Alto
-							{% endif %}
-						</td>
-						<td>
-							<div class="progress">
-								<div class="progress-bar bg-success" role="progressbar" style="width: {{ progress[i][1] }}%;" aria-valuenow={{ progress[i][1] }} aria-valuemin="0" aria-valuemax="100">{{ progress[i][1] }}%</div>
-							</div>
-						</td>
-						<td style="text-align: center;">
-							{% if disablements[i] %}
-								<a class="btn btn-primary disabled" role="button" href={{ url_for('quiz', category=categories[i][0]) }}>Evaluar</a>
-							{% else %}
-								<a class="btn btn-primary" role="button" href={{ url_for('quiz', category=categories[i][0]) }}>Evaluar</a>
-							{% endif %}
-						</td>
-					</tr>
-					{% endfor %}
-				</tbody>
-			</table>
+<div class="row mb-4">
+	<div class="col">
+		<div id="carouselExampleCaptions" class="carousel slide" data-bs-ride="carousel">
+			<div class="carousel-indicators">
+				<button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+				<button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="1" aria-label="Slide 2"></button>
+				<button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="2" aria-label="Slide 3"></button>
+			</div>
+			<div class="carousel-inner">
+				<div class="carousel-item active">
+					<img src="https://www.ninoversace.com/wp-content/uploads/landscape-mountains-sky-4843193.jpg" style="height: 400px;" class="d-block w-100">
+					<div class="carousel-caption d-none d-md-block">
+						<h5>First slide label</h5>
+						<p>Some representative placeholder content for the first slide.</p>
+					</div>
+				</div>
+				<div class="carousel-item">
+					<img src="https://www.ninoversace.com/wp-content/uploads/landscape-mountains-sky-4843193.jpg" style="height: 400px;" class="d-block w-100">
+					<div class="carousel-caption d-none d-md-block">
+					<h5>Second slide label</h5>
+					<p>Some representative placeholder content for the second slide.</p>
+					</div>
+				</div>
+				<div class="carousel-item">
+					<img src="https://www.ninoversace.com/wp-content/uploads/landscape-mountains-sky-4843193.jpg" style="height: 400px;" class="d-block w-100">
+					<div class="carousel-caption d-none d-md-block">
+						<h5>Third slide label</h5>
+						<p>Some representative placeholder content for the third slide.</p>
+					</div>
+				</div>
+			</div>
+			<button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="prev">
+				<span class="carousel-control-prev-icon" aria-hidden="true"></span>
+				<span class="visually-hidden">Previous</span>
+			</button>
+			<button class="carousel-control-next" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="next">
+				<span class="carousel-control-next-icon" aria-hidden="true"></span>
+				<span class="visually-hidden">Next</span>
+			</button>
 		</div>
-	{% else %}
-		<div class="alert alert-danger" role="alert">
-			Primero tienes que iniciar sesión desde Aula.
-		</div>
-	{% endif %}
+	</div>
+</div>
+<div class="row mb-4">
+	<div class="col">
+		<h2 class="text-center">¿Cómo funciona?</h2>
+		<p class="text-center">Conoce las características de SBS</p>
+		
+	</div>
+</div>
 {% endblock %}
