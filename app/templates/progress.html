@@ -7,18 +7,20 @@
 {% block body %}
 	<div class="row mb-5">
 		<div class="col">
-			<div class="d-flex flex-row-reverse bd-highlight">
-				<select class="form-select form-select-sm" aria-label=".form-select-sm example" style="width: 250px;">
-					<option value="1">General</option>
-					<option value="2">Two</option>
-					<option value="3">Three</option>
-				</select>
+			<div class="row">
+				<div class="col">
+					<h5>Últimos niveles logrados</h5>
+				</div>
+				<div class="col">
+					<div class="d-flex flex-row-reverse bd-highlight">
+						<select id="category" class="form-select form-select-sm" aria-label=".form-select-sm example" style="width: 250px;">
+							{% for cat in categories %}
+							<option value="{{ cat[0] }}">{{ cat[1] }}</option>
+							{% endfor %}
+						</select>
+					</div>
+				</div>
 			</div>
-		</div>
-	</div>
-	<div class="row mb-5">
-		<div class="col">
-			<h5>Variación de tus últimos 100 niveles logrados</h5>
 			<canvas id="variation-of-levels" height="80"></canvas>
 		</div>
 	</div>
@@ -26,66 +28,101 @@
 		<div class="col">
 			<h5>Métricas</h5>
 			<div class="row">
-				<div class="col-4">
-					<div class="card text-dark bg-light">
+				<div class="col-md-4 col-sm-12">
+					<div class="card text-dark bg-light" style="height:100%;">
 						<div class="card-body text-center">
 							<h5 class="card-title">Problemas resueltos</h5>
-							<h1>103</h1>
-							<p class="card-text">problemas</p>
+							<h1>{{ metrics[0] }}</h1>
+							<p class="card-text">
+								{{ 'problema' if metrics[0] == 1 else 'problemas' }}
+							</p>
 						</div>
 					</div>
 				</div>
-				<div class="col-4">
-					<div class="card text-dark bg-light">
+				<div class="col-md-4 col-sm-12">
+					<div class="card text-dark bg-light" style="height:100%;">
 						<div class="card-body text-center">
 							<h5 class="card-title">Intentos no resueltos</h5>
-							<h1>3</h1>
-							<p class="card-text">problemas</p>
+							<h1>{{ metrics[1] }}</h1>
+							<p class="card-text">
+								{{ 'problema' if metrics[1] == 1 else 'problemas' }}
+							</p>
 						</div>
 					</div>
 				</div>
-				<div class="col-4">
-					<div class="card text-dark bg-light">
+				<div class="col-md-4 col-sm-12">
+					<div class="card text-dark bg-light" style="height:100%;">
 						<div class="card-body text-center">
 							<h5 class="card-title">Envíos</h5>
-							<h1>1033</h1>
-							<p class="card-text">envíos</p>
+							<h1>{{ metrics[2] }}</h1>
+							<p class="card-text">
+								{{ 'envío' if metrics[2] == 1 else 'envíos' }}
+							</p>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div class="row mb-5">
+	<div class="row">
 		<div class="col">
 			<h5>Distribución de veredictos</h5>
 			<div class="row">
-				<div class="col-6">
-					<div class="wrapper">
-						<canvas id="distribution-of-verdicts" width="320" height="320"></canvas>
-					</div>
-				</div>
-				<div class="col-6">
+				<div class="col">
 					<div class="table-responsive">
 						<table class="table table-sm">
 							<thead>
 								<tr>
 									<th scope="col">Veredicto</th>
 									<th scope="col">Descripción</th>
+									<th scope="col">Cantidad</th>
 								</tr>
 							</thead>
 							<tbody>
 								<tr>
-									<td>Otto</td>
-									<td>@mdo</td>
+									<td>In Queue</td>
+									<td>El envío está esperando su turno para ser procesado.</td>
+									<td>{{ amount_by_status[0] }}</td>
 								</tr>
 								<tr>
-									<td>Thornton</td>
-									<td>@fat</td>
+									<td>Processing</td>
+									<td>El envío se está juzgando.</td>
+									<td>{{ amount_by_status[1] }}</td>
 								</tr>
 								<tr>
-									<td>Larry the Bird</td>
-									<td>@twitter</td>
+									<td>Accepted</td>
+									<td>El código está 100% correcto.</td>
+									<td>{{ amount_by_status[2] }}</td>
+								</tr>
+								<tr>
+									<td>Wrong Answer</td>
+									<td>El código falló en algún caso de prueba.</td>
+									<td>{{ amount_by_status[3] }}</td>
+								</tr>
+								<tr>
+									<td>Time Limit Exceeded</td>
+									<td>El código no logra terminar en un tiempo prudente.</td>
+									<td>{{ amount_by_status[4] }}</td>
+								</tr>
+								<tr>
+									<td>Compilation Error</td>
+									<td>Hubo un error antes de intentar ejecutar tu código.</td>
+									<td>{{ amount_by_status[5] }}</td>
+								</tr>
+								<tr>
+									<td>Runtime Error</td>
+									<td>El código generó un error mientras se estaba ejecutando.</td>
+									<td>{{ amount_by_status[6] }}</td>
+								</tr>
+								<tr>
+									<td>Internal Error</td>
+									<td>La plataforma presenta un error para procesar el código.</td>
+									<td>{{ amount_by_status[12] }}</td>
+								</tr>
+								<tr>
+									<td>Exec Format Error</td>
+									<td>El código genera una salida con espacios o saltos de líneas adicionales.</td>
+									<td>{{ amount_by_status[13] }}</td>
 								</tr>
 							</tbody>
 						</table>
@@ -94,191 +131,98 @@
 			</div>
 		</div>
 	</div>
-	<div class="row mb-4">
-		<div class="col">
-			<h5>Distribución de veredictos</h5>
-			<div class="graph">
-				<ul class="months">
-					<li>Ene</li>
-					<li>Feb</li>
-					<li>Mar</li>
-					<li>Abr</li>
-					<li>May</li>
-					<li>Jun</li>
-					<li>Jul</li>
-					<li>Ago</li>
-					<li>Sep</li>
-					<li>Oct</li>
-					<li>Nov</li>
-					<li>Dic</li>
-				</ul>
-				<ul class="days">
-					<li>Dom</li>
-					<li>Lun</li>
-					<li>Mar</li>
-					<li>Mie</li>
-					<li>Jue</li>
-					<li>Vie</li>
-					<li>Sáb</li>
-				</ul>
-				<ul class="squares"></ul>
-			</div>
-		</div>
-	</div>
 {% endblock %}
 
 {% block additional_css %}
 <style type="text/css">
-	.wrapper {
-		width: 320px;
-		height: 320px;
-	}
-
-	body ul {
-		list-style: none;
-	}
-
-	:root {
-		--square-size: 15px;
-		--square-gap: 5px;
-		--week-width: calc(var(--square-size) + var(--square-gap));
-	}
-
-	.months { grid-area: months; }
-	.days { grid-area: days; }
-	.squares { grid-area: squares; }
-
-	.graph {
-		display: inline-grid;
-		grid-template-areas: "empty months" "days squares";
-		grid-template-columns: auto 1fr;
-		grid-gap: 10px;
-	}
-
-	.months {
-		display: grid;
-		grid-template-columns: calc(var(--week-width) * 4) /* Jan */
-		calc(var(--week-width) * 4) /* Feb */
-		calc(var(--week-width) * 4) /* Mar */
-		calc(var(--week-width) * 5) /* Apr */
-		calc(var(--week-width) * 4) /* May */
-		calc(var(--week-width) * 4) /* Jun */
-		calc(var(--week-width) * 5) /* Jul */
-		calc(var(--week-width) * 4) /* Aug */
-		calc(var(--week-width) * 4) /* Sep */
-		calc(var(--week-width) * 5) /* Oct */
-		calc(var(--week-width) * 4) /* Nov */
-		calc(var(--week-width) * 5) /* Dec */;
-	}
-
-	.days, .squares {
-		display: grid;
-		grid-gap: var(--square-gap);
-		grid-template-rows: repeat(7, var(--square-size));
-	}
-
-	.squares {
-		grid-auto-flow: column;
-		grid-auto-columns: var(--square-size);
-	}
-
-	.days li:nth-child(odd) {
-		visibility: hidden;
-	}
-
-	.squares li {
-		background-color: #ebedf0;
-	}
-
-	.squares li[data-level="1"] {
-		background-color: #c6e48b;
-	}
-
-	.squares li[data-level="2"] {
-		background-color: #7bc96f;
-	}
-
-	.squares li[data-level="3"] {
-		background-color: #196127;
-	}
-	</style>
+	.wrapper { width: 320px; height: 320px; }
+</style>
 {% endblock %}
 
 {% block additional_javascript %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-	var xValues = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-	var yValues = [1, 2, 1, 1, 1, 2, 2, 3, 2, 3, 2, 3, 3, 2, 1, 1];
-
-	new Chart("variation-of-levels", {
-		type: "bar",
-		data: {
-			labels: xValues,
-			datasets: [{
-				label: 'Nivel',
-				backgroundColor: "rgba(54, 162, 235, 0.2)",
-				borderColor: [
-					'rgb(54, 162, 235)'
-				],
-				borderWidth: 1,
-				data: yValues
-			}]
-		},
-		options: {
-			legend: {
-				display: false
-			},
-			title: {
-				display: true,
-				text: "Variación de los niveles alcanzados",
-				maintainAspectRatio: false
-			},
-			scales: {
-				yAxes: [{
-					display: true
-				}]
-			}
-		}
-	});
-</script>
-<script>
-	var xValues = ["Italy", "France", "Spain", "USA", "Argentina"];
-	var yValues = [55, 49, 44, 24, 15];
-	var barColors = [
-		"#b91d47",
-		"#00aba9",
-		"#2b5797",
-		"#e8c3b9",
-		"#1e7145"
-	];
-
-	new Chart("distribution-of-verdicts", {
-		type: "pie",
-		data: {
-			labels: xValues,
-			datasets: [{
-				backgroundColor: barColors,
-				data: yValues
-			}]
-		},
-		options: {
-			title: {
-				display: true,
-				text: "World Wide Wine Production 2018"
-			},
-			legend: {
-				display: false
-			}
-		}
-	});
-</script>
 <script type="text/javascript">
-	// Add squares
+	let myChart;
 
-const squares = document.querySelector('.squares');
-for (var i = 1; i < 365; i++) {
-  const level = Math.floor(Math.random() * 3);  
-  squares.insertAdjacentHTML('beforeend', `<li data-level="${level}"></li>`);
-}
+	function generateChart(id_category) {
+		$.ajax({
+			url: window.location.origin + '/api/user_progress',
+			data: JSON.stringify({ id_category: id_category }),
+			type: 'POST',
+			contentType: 'application/json',
+			dataType: 'json',
+			timeout: 3000,
+			beforeSend: function() {
+			},
+			success : function(json) {
+				console.log(json);
+				var ctx = document.getElementById('variation-of-levels');
+				var ctx = document.getElementById('variation-of-levels').getContext('2d');
+				var ctx = $('#variation-of-levels');
+				var ctx = 'variation-of-levels';
+				var xValues = json['details']['dates'];
+				var yValues = json['details']['distribution_ids'];
+				
+				if (myChart) myChart.destroy();
+				
+				myChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: xValues,
+						datasets: [{
+							label: 'Nivel',
+							backgroundColor: "rgba(54, 162, 235, 0.2)",
+							borderColor: [
+								'rgb(54, 162, 235)'
+							],
+							borderWidth: 1,
+							data: yValues
+						}]
+					},
+					options: {
+						legend: {
+							display: false
+						},
+						title: {
+							display: true,
+							text: 'Variación de los niveles alcanzados',
+							maintainAspectRatio: false
+						},
+						scales: {
+							x: {
+								title: {
+									display: true,
+									text: 'Fecha'
+								}
+							},
+							y: {
+								min: 0,
+								max: 3,
+								ticks: {
+									stepSize: 1
+								}
+							}
+						}
+					}
+				});
+			},
+			error : function(xhr, status) {
+				
+			},
+			complete : function(xhr, status) {
+				
+			}
+		});
+	}
+
+	document.getElementById('category').onchange = changeListener;
+	function changeListener(){
+		var value = this.value;
+		generateChart(value);
+	}
+
+	$(document).ready(function() {
+		generateChart(1);
+	});
 </script>
 {% endblock %}

@@ -152,8 +152,8 @@ def quiz(category=None):
             id_problem_3 = problem_ids[2][0]
             id_problem_4 = problem_ids[3][0]
 
-            insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-            data = (session['user'], category_index, final_level_int, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
+            insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+            data = (session['user'], category_index, final_level_int, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime.now())
             cursor.execute(insert_stmt, data)
             conn.commit()
 
@@ -248,8 +248,28 @@ def exercises(category=None, id_exercise=None):
 
 @app.route('/progress', methods=['GET'])
 def progress():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    cursor.execute('SELECT level FROM distribution WHERE email=%(email)s ORDER BY id_distribution ASC LIMIT 100;', { 'email': session['user'] })
+    distribution_ids = [x[0] for x in cursor.fetchall()]
+    enumeration = [x for x in range(1, len(distribution_ids) + 1)]
+    cursor.execute('SELECT DISTINCT(id_problem) FROM submission_2 WHERE email=%(email)s AND score=100;', { 'email': session['user'] })
+    problem_ids = [str(x[0]) for x in cursor.fetchall()]
+    pro_set = ','.join(problem_ids)
+    cursor.execute('SELECT DISTINCT(id_problem) FROM submission_2 WHERE email=%(email)s AND id_problem NOT IN (' + pro_set + ');', { 'email': session['user'] })
+    unsolved_problems = cursor.fetchall()
+    cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE email=%(email)s;', { 'email': session['user'] })
+    number_of_submissions = cursor.fetchone()[0]
+    metrics = [len(problem_ids), len(unsolved_problems), number_of_submissions]
+    amount_by_status = []
+    for status_id in range(1, 15):
+        cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE email=%(email)s AND verdict_id=%(verdict)s;', { 'email': session['user'], 'verdict': status_id })
+        amount_by_status.append(cursor.fetchone()[0])
+    amount_by_status[6] += sum(amount_by_status[7:12])
+    for i in range(len(categories)):
+        categories[i][0] = i + 1
     page_title = 'Progreso'
-    return render_template('progress.html', page_title=page_title)
+    return render_template('progress.html', page_title=page_title, categories=categories, distribution_ids=distribution_ids, enumeration=enumeration, metrics=metrics, amount_by_status=amount_by_status)
 
 @app.route('/profile', methods=['GET'])
 def profile():
@@ -499,22 +519,10 @@ def submit():
                     
                     ids_list += [x[0] for x in ids]
                 
-                '''
-                print('current_progress:', current_progress)
-                print('current_level:', current_level)
-                print('new_level:', new_level)
-                print('new_distribution:', new_distribution)
-                print('email:', email)
-                print('cat:', category_index)
-                print('problem_ids:', problem_ids)
-                print('pro_set:', pro_set)
-                print('ids_list', ids_list)
-                '''
-                
                 id_problem_1, id_problem_2, id_problem_3, id_problem_4 = ids_list
 
-                insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-                data = (session['user'], category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4)
+                insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+                data = (session['user'], category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime.now())
                 cursor.execute(insert_stmt, data)
                 conn.commit()
 
@@ -618,6 +626,32 @@ def get_submission(id_submission=None):
             return { 'message': 'ID does not exist' }, 400
     else:
         return { 'message': 'The user is not logged in' }, 400
+
+@app.route('/api/user_progress', methods=['POST'])
+def user_progress():
+    body = request.get_json()
+    if body is None:
+        return 'The request body is null', 400
+    if 'id_category' not in body:
+        return 'You need to specify the category', 400
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        id_category = body['id_category']
+        cursor.execute('SELECT level, datetime FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution ASC LIMIT 100;', { 'email': session['user'], 'cat': id_category })
+        data = cursor.fetchall()
+        print(data)
+        distribution_ids = [x[0] for x in data]
+        dates = [x[1].strftime('%d-%m-%Y') for x in data]
+
+        dicc = {}
+        dicc['details'] = {
+            'distribution_ids': distribution_ids,
+            'dates': dates
+        }
+        return dicc, 200
+    else:
+        return { 'message': 'no_ok' }, 400
 
 @app.route('/submissions', methods=['GET'])
 @app.route('/submissions/<int:page>', methods=['GET'])
