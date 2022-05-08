@@ -5,32 +5,33 @@
 {% endblock %}
 
 {% block body %}
+<h5>Información Personal</h5>
 <div class="row mb-4">
-	<div class="col-6">
+	<div class="col-md-6 col-sm-12">
 		<label for="names" class="form-label">Nombres</label>
 		<input type="text" class="form-control" id="names" value="{{ profile_data[1] }}" disabled>
 	</div>
-	<div class="col-6">
+	<div class="col-md-6 col-sm-12">
 		<label for="surnames" class="form-label">Apellidos</label>
 		<input type="text" class="form-control" id="surnames" value="{{ profile_data[2] }}" disabled>
 	</div>
 </div>
 <div class="row mb-4">
-	<div class="col-6">
+	<div class="col-md-6 col-sm-12">
 		<label for="email" class="form-label">Correo</label>
 		<input type="text" class="form-control" id="email" value="{{ profile_data[0] }}" disabled>
 	</div>
-	<div class="col-6">
+	<div class="col-md-6 col-sm-12">
 		<label for="created_at" class="form-label">Fecha de registro</label>
 		<input type="text" class="form-control" id="created_at" value="{{ profile_data[4].strftime('%d-%m-%Y') }}" disabled>
 	</div>
 </div>
-<div class="row">
-	<div class="col-6">
+<div class="row mb-5">
+	<div class="col-md-6 col-sm-12">
 		<label for="role" class="form-label">Tipo de cuenta</label>
 		<input type="text" class="form-control" id="role" value="{{ profile_data[6] }}" disabled>
 	</div>
-	<div class="col-6">
+	<div class="col-md-6 col-sm-12">
 		<label for="group" class="form-label">Paralelo</label>
 		<select id="group" class="form-select">
 			{% for g in groups %}
@@ -41,6 +42,39 @@
 		</select>
 	</div>
 </div>
+<h5>Insignias</h5>
+<div class="row">
+	<div class="col">
+		<div class="table-responsive">
+			<table class="table">
+				<thead>
+					<th>#</th>
+					<th>Descripción</th>
+					<th>Fecha</th>
+					<th>Distintivo</th>
+				</thead>
+				<tbody>
+				{% if badges|length > 0 %}
+				{% for badge in badges %}
+					<tr>
+						<td>{{ badge[0] }}</td>
+						<td>{{ badge[1] }}</td>
+						<td>{{ badge[3] }}</td>
+						<td class="text-center">
+							<i class="bi bi-balloon-fill" style="color: #{{ badge[2]  }};"></i>
+						</td>
+					</tr>
+				{% endfor %}
+				{% else %}
+					<tr class="table-warning text-center">
+						<td colspan="4">Aún no has logrado recibir ninguna insignia.</td>
+					</tr>
+				{% endif %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
 	<div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
 		<div class="d-flex">
@@ -49,6 +83,10 @@
 		</div>
 	</div>
 </div>
+{% endblock %}
+
+{% block additional_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 {% endblock %}
 
 {% block additional_javascript %}

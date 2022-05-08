@@ -80,8 +80,9 @@ def index():
     for t in tables:
         cursor.execute('SELECT COUNT(*) FROM ' + t + ';')
         statistics.append(cursor.fetchone()[0])
+    current_year = datetime.now().year
     page_title = 'Inicio'
-    return render_template('index.html', page_title=page_title, statistics=statistics)
+    return render_template('index.html', page_title=page_title, statistics=statistics, current_year=current_year)
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
@@ -290,9 +291,10 @@ def profile():
     profile_data.append('Estudiante' if session['role'] == 'learner' else 'Profesor')
     cursor.execute('SELECT id_group FROM groups ORDER BY id_group ASC')
     groups = [x[0] for x in cursor.fetchall()]
-    print(groups)
+    cursor.execute('SELECT badges.id_badge, badges.description, badges.bg_color, badges_users.datetime FROM badges JOIN badges_users ON badges_users.id_badget=badges.id_badge WHERE badges_users.email=%(email)s;', { 'email': session['user'] })
+    badges = cursor.fetchall()
     page_title = 'Perfil'
-    return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups)
+    return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups, badges=badges)
 
 @app.route('/admin/<string:option>', methods=['GET'])
 def admin(option=None):

@@ -17,7 +17,7 @@
 					En esta plataforma podrás practicar con cientos de ejercicios que estarán ajustados a tu nivel de progreso actual. Siempre sabrás que ejercicios son los más recomendables para ti, para que así no tengas que perder tiempo buscándolos.
 				</p>
 				<a href="#how-this-to-work" class="card-link">Quiero saber más</a>
-				<a href="#" class="card-link">Iniciar sesión</a>
+				<a href="#" data-bs-toggle="modal" data-bs-target="#exampleModal" class="card-link">Iniciar sesión</a>
 			</div>
 		</div>
 	</div>
@@ -126,7 +126,7 @@
 					</h2>
 					<div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
 						<div class="accordion-body">
-							Actualmente solo 1: Python 3.
+							Actualmente solo uno: Python 3.
 						</div>
 					</div>
 				</div>
@@ -158,12 +158,29 @@
 		</div>
 	</div>
 </div>
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="exampleModalLabel">Iniciar Sesión</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				Para iniciar sesión primero tienes que acceder desde el curso de programación en Aula.
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+				<a class="btn btn-primary" href="https://aula.usm.cl/" role="button" target="_blank">Ir a Aula</a>
+			</div>
+		</div>
+	</div>
+</div>
 {% endblock %}
 {% block footer %}
-<footer class="bg-light text-center text-lg-start">
-	<div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
-		&copy; 2022 Copyright:
-		<a class="text-dark" href="mailto:hleytondiaz@gmail.com">Hugo Leyton</a>
+<footer class="text-center text-lg-start" style="background-color: #e3f2fd;">
+	<div class="text-center p-3">
+		&copy; {{ current_year }} Copyright:
+		<a class="text-dark" href="mailto:hugo.leyton@sansano.usm.cl">Hugo Leyton</a>
 	</div>
 </footer>
 {% endblock %}
