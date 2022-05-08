@@ -73,8 +73,15 @@ def modified_b64decode(string):
 
 @app.route('/')
 def index():
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    statistics = []
+    tables = ['problems', 'submission_2', 'users']
+    for t in tables:
+        cursor.execute('SELECT COUNT(*) FROM ' + t + ';')
+        statistics.append(cursor.fetchone()[0])
     page_title = 'Inicio'
-    return render_template('index.html', page_title=page_title)
+    return render_template('index.html', page_title=page_title, statistics=statistics)
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
@@ -246,6 +253,7 @@ def exercises(category=None, id_exercise=None):
             page_title = title if problem_allowed else 'Error'
             return render_template('exercise.html', page_title=page_title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category, problem_allowed=problem_allowed)
 
+'''
 @app.route('/progress', methods=['GET'])
 def progress():
     conn = mysql.connect()
@@ -266,10 +274,12 @@ def progress():
         cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE email=%(email)s AND verdict_id=%(verdict)s;', { 'email': session['user'], 'verdict': status_id })
         amount_by_status.append(cursor.fetchone()[0])
     amount_by_status[6] += sum(amount_by_status[7:12])
-    for i in range(len(categories)):
-        categories[i][0] = i + 1
+    categories_aux = [x for x in categories]
+    for i in range(len(categories_aux)):
+        categories_aux[i][0] = i + 1
     page_title = 'Progreso'
-    return render_template('progress.html', page_title=page_title, categories=categories, distribution_ids=distribution_ids, enumeration=enumeration, metrics=metrics, amount_by_status=amount_by_status)
+    return render_template('progress.html', page_title=page_title, categories=categories_aux, distribution_ids=distribution_ids, enumeration=enumeration, metrics=metrics, amount_by_status=amount_by_status)
+'''
 
 @app.route('/profile', methods=['GET'])
 def profile():
