@@ -59,7 +59,7 @@
 					<tr>
 						<td>{{ badge[0] }}</td>
 						<td>{{ badge[1] }}</td>
-						<td>{{ badge[3] }}</td>
+						<td>{{ badge[3].strftime('%d-%m-%Y') }}</td>
 						<td class="text-center">
 							<i class="bi bi-balloon-fill" style="color: #{{ badge[2]  }};"></i>
 						</td>
@@ -72,6 +72,24 @@
 				{% endif %}
 				</tbody>
 			</table>
+		</div>
+	</div>
+</div>
+<div class="modal fade" id="badgesModal" tabindex="-1" aria-labelledby="badgesModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="badgesModalLabel">¡Felicitaciones!</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<h6>Obtuviste las siguientes insignias:</h6>
+				<div class="table-responsive">
+					<table class="table table-borderless">
+						<tbody id="badges"></tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
@@ -90,6 +108,7 @@
 {% endblock %}
 
 {% block additional_javascript %}
+<script type="text/javascript" src="{{url_for('static', filename='functions.js')}}"></script>
 <script type="text/javascript">
 	document.getElementById("group").onchange = changeListener;
 	function changeListener(){
@@ -109,6 +128,8 @@
 				$('#liveToast').removeClass('bg-danger');
 				$('#liveToast').addClass('bg-success');
 				$('.toast-body').text('¡Muy bien! El paralelo fue asignado.');
+				let badgesModal = new bootstrap.Modal(document.getElementById('badgesModal'));
+				checkBadges(badgesModal);
 			},
 			error : function(xhr, status) {
 				$('#liveToast').removeClass('bg-success');
@@ -120,5 +141,8 @@
 			}
 		});
 	}
+	$('#badgesModal').on('hidden.bs.modal', function () {
+		location.reload();
+	});
 </script>
 {% endblock %}

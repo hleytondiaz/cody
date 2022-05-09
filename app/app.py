@@ -24,7 +24,7 @@ load_dotenv(find_dotenv())
 app = Flask(__name__)
 mysql = MySQL()
 cors = CORS(app, resources={r'/api/*': {'origins': '*'}})
-scheduler = APScheduler()
+#scheduler = APScheduler()
 
 app.config['MYSQL_DATABASE_HOST'] = os.environ.get('MYSQL_DATABASE_HOST')
 app.config['MYSQL_DATABASE_PORT'] = int(os.environ.get('MYSQL_DATABASE_PORT'))
@@ -41,7 +41,7 @@ categories = [
     ['programas-secuenciales', 'Programas Secuenciales'],
     ['condicionales', 'Condicionales'],
     ['ciclos', 'Ciclos'],
-    ['Strings', 'Strings'],
+    ['strings', 'Strings'],
     ['funciones', 'Funciones'],
     ['listas', 'Listas'],
     ['tuplas', 'Tuplas'],
@@ -291,7 +291,7 @@ def profile():
     profile_data.append('Estudiante' if session['role'] == 'learner' else 'Profesor')
     cursor.execute('SELECT id_group FROM groups ORDER BY id_group ASC')
     groups = [x[0] for x in cursor.fetchall()]
-    cursor.execute('SELECT badges.id_badge, badges.description, badges.bg_color, badges_users.datetime FROM badges JOIN badges_users ON badges_users.id_badget=badges.id_badge WHERE badges_users.email=%(email)s;', { 'email': session['user'] })
+    cursor.execute('SELECT badges.id_badge, badges.description, badges.bg_color, badges_users.datetime FROM badges JOIN badges_users ON badges_users.id_badge=badges.id_badge WHERE badges_users.email=%(email)s ORDER BY badges_users.datetime DESC;', { 'email': session['user'] })
     badges = cursor.fetchall()
     page_title = 'Perfil'
     return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups, badges=badges)
@@ -302,6 +302,60 @@ def admin(option=None):
         return render_template('exercises_admin.html')
     if option == 'groups':
         return render_template('groups.html')
+
+@app.route('/api/badges_earned', methods=['POST'])
+def badges_earned():
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM badges')
+        badges = cursor.fetchall()
+        cursor.execute('SELECT id_badge FROM badges_users WHERE email=%(email)s AND viewed=True;', { 'email': session['user'] })
+        user_badges = [x[0] for x in cursor.fetchall()]
+        badges_not_earned = []
+        for badge in badges:
+            if badge[0] not in user_badges:
+                badges_not_earned.append(badge)
+        queries = {
+            1: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\';', 1],
+            2: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\';', 5],
+            3: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\';', 10],
+            4: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\';', 15],
+            5: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\';', 20],
+            6: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 1],
+            7: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 5],
+            8: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 10],
+            9: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 5],
+            10: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 20],
+            11: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=1 AND submission_2.verdict_id=3;', 4],
+            12: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=2 AND submission_2.verdict_id=3;', 4],
+            13: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=3 AND submission_2.verdict_id=3;', 4],
+            14: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=4 AND submission_2.verdict_id=3;', 4],
+            15: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=5 AND submission_2.verdict_id=3;', 4],
+            16: ['SELECT COUNT(*) FROM users WHERE id_user=\'USER_EMAIL\' AND id_group != 0;', 1],
+            17: ['SELECT COUNT(*) FROM feedback WHERE email=\'USER_EMAIL\';', 1],
+            18: ['SELECT COUNT(*) FROM feedback WHERE email=\'USER_EMAIL\';', 5],
+            19: ['SELECT COUNT(*) FROM feedback WHERE email=\'USER_EMAIL\';', 10],
+            20: ['SELECT COUNT(*) FROM feedback WHERE email=\'USER_EMAIL\';', 15],
+            21: ['SELECT COUNT(*) FROM feedback WHERE email=\'USER_EMAIL\';', 20]
+        }
+        new_badges = {}
+        new_badges['badges'] = []
+        for x in badges_not_earned:
+            if x[0] in queries:
+                query = queries[x[0]][0].replace('USER_EMAIL', session['user'])
+                cursor.execute(query)
+                result_from_query = cursor.fetchone()[0]
+                result_from_dicc = queries[x[0]][1]
+                if result_from_query == result_from_dicc:
+                    new_badges['badges'].append(x)
+                    insert_stmt = 'INSERT INTO badges_users (email, id_badge, datetime, viewed) VALUES (%s, %s, %s, %s)'
+                    data = (session['user'], x[0], datetime.now(), True)
+                    cursor.execute(insert_stmt, data)
+                    conn.commit()
+        return { 'badges': new_badges['badges'] }, 200
+    else:
+        return { 'message': 'no_ok' }, 400
 
 @app.route('/api/update_group', methods=['POST'])
 def update_group():
@@ -400,6 +454,7 @@ def submit():
         correct = 0
         total = len(dicc['submissions'])
         list_tokens = []
+        list_verdicts = []
 
         for x in dicc['submissions']:
             correct += 1 if x['status_id'] == 3 else 0
@@ -412,6 +467,7 @@ def submit():
                 x['stdout'] = None
                 x['expected_output'] = None
             list_tokens.append(x['token'])
+            list_verdicts.append(x['status_id'])
             i += 1
 
         status = 0
@@ -439,13 +495,13 @@ def submit():
         cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': session['user'] })
         problem_solved = cursor.fetchone()[0]
 
-        if problem_solved == 0:
-            tokens = ','.join(list_tokens)
-            insert_stmt = 'INSERT INTO submission_2 (id_problem, email, source_code, score, datetime, tokens, valid) VALUES (%s, %s, %s, %s, %s, %s, %s)'
-            data = (id_problem, session['user'], source_code, percentage_correct, datetime.now(), tokens, True)
-            cursor.execute(insert_stmt, data)
-            conn.commit()
+        tokens = ','.join(list_tokens)
+        insert_stmt = 'INSERT INTO submission_2 (id_problem, email, source_code, score, datetime, tokens, valid, verdict_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+        data = (id_problem, session['user'], source_code, percentage_correct, datetime.now(), tokens, True, max(list_verdicts))
+        cursor.execute(insert_stmt, data)
+        conn.commit()
 
+        if problem_solved == 0:
             cursor.execute('SELECT category FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_problem })
             category_index = cursor.fetchone()[0]
 
@@ -730,5 +786,5 @@ def scheduled_task():
     cursor.execute('UPDATE feedback SET status=0 WHERE status=1')
     conn.commit()
 
-scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
-scheduler.start()
+#scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
+#scheduler.start()

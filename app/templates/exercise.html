@@ -105,6 +105,24 @@
 			</div>
 		</div>
 		<div id="results"></div>
+		<div class="modal fade" id="badgesModal" tabindex="-1" aria-labelledby="badgesModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="badgesModalLabel">¡Felicitaciones!</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						<h6>Obtuviste las siguientes insignias:</h6>
+						<div class="table-responsive">
+							<table class="table table-borderless">
+								<tbody id="badges"></tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	{% else %}
 	<div class="alert alert-danger" role="alert">
 		No tienes permitido ver este problema porque no forma parte de tu distribución actual.
@@ -127,6 +145,7 @@
 		<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.js"></script>
 	    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/contrib/auto-render.min.js"></script>
+	    <script type="text/javascript" src="{{url_for('static', filename='functions.js')}}"></script>
 		<script type="text/javascript">
 			$(document).ready(function(){
 				$("div.card table").addClass("table table-bordered");
@@ -247,6 +266,8 @@
 								}
 								//$("tb-" + i.toString()).append('');
 							}
+							let badgesModal = new bootstrap.Modal(document.getElementById('badgesModal'));
+							checkBadges(badgesModal);
 						},
 						error : function(xhr, status) {
 							$("html, body").animate({
