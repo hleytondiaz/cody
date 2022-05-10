@@ -299,7 +299,7 @@ def profile():
     cursor.execute('SELECT * FROM users WHERE id_user=%(user)s', { 'user': session['user'] })
     profile_data = [x for x in cursor.fetchall()[0]]
     profile_data.append('Estudiante' if session['role'] == 'learner' else 'Profesor')
-    cursor.execute('SELECT id_group FROM groups ORDER BY id_group ASC')
+    cursor.execute('SELECT id_group FROM `groups` ORDER BY id_group ASC;')
     groups = [x[0] for x in cursor.fetchall()]
     cursor.execute('SELECT badges.id_badge, badges.description, badges.bg_color, badges_users.datetime FROM badges JOIN badges_users ON badges_users.id_badge=badges.id_badge WHERE badges_users.email=%(email)s ORDER BY badges_users.datetime DESC;', { 'email': session['user'] })
     badges = cursor.fetchall()
