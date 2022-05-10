@@ -18,6 +18,7 @@ import markdown
 import requests
 import settings
 import os
+import time
 
 load_dotenv(find_dotenv())
 
@@ -86,6 +87,9 @@ def index():
 
 @app.route('/quizzes/<string:category>', methods=['GET', 'POST'])
 def quiz(category=None):
+    if 'user' not in session:
+        return render_template('not_authorized.html', page_title='Acceso denegado')
+
     conn = mysql.connect()
     cursor = conn.cursor()
     category_index = get_category_index(categories, category)
@@ -172,6 +176,9 @@ def quiz(category=None):
 @app.route('/exercises/<string:category>')
 @app.route('/exercises/<string:category>/<int:id_exercise>')
 def exercises(category=None, id_exercise=None):
+    if 'user' not in session:
+        return render_template('not_authorized.html', page_title='Acceso denegado')
+
     conn = mysql.connect()
     cursor = conn.cursor()
     
@@ -284,6 +291,9 @@ def progress():
 
 @app.route('/profile', methods=['GET'])
 def profile():
+    if 'user' not in session:
+        return render_template('not_authorized.html', page_title='Acceso denegado')
+
     conn = mysql.connect()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE id_user=%(user)s', { 'user': session['user'] })
@@ -296,12 +306,14 @@ def profile():
     page_title = 'Perfil'
     return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups, badges=badges)
 
+'''
 @app.route('/admin/<string:option>', methods=['GET'])
 def admin(option=None):
     if option == 'exercises':
         return render_template('exercises_admin.html')
     if option == 'groups':
         return render_template('groups.html')
+'''
 
 @app.route('/api/badges_earned', methods=['POST'])
 def badges_earned():
@@ -325,7 +337,7 @@ def badges_earned():
             6: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 1],
             7: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 5],
             8: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 10],
-            9: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 5],
+            9: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 15],
             10: ['SELECT COUNT(*) FROM submission_2 WHERE email=\'USER_EMAIL\' AND verdict_id=3;', 20],
             11: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=1 AND submission_2.verdict_id=3;', 4],
             12: ['SELECT COUNT(DISTINCT(submission_2.id_problem)) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE submission_2.email=\'USER_EMAIL\' AND problems.category=2 AND submission_2.verdict_id=3;', 4],
@@ -386,8 +398,12 @@ def submit():
     if 'source_code' not in body:
         return 'You need to specify the source_code', 400
 
+    if 'only_samples' not in body:
+        return 'You need to specify the only_samples', 400
+
     id_problem = body['id_problem']
     source_code = body['source_code']
+    only_samples = body['only_samples']
     source_code_to_judge = source_code
 
     conn = mysql.connect()
@@ -407,10 +423,12 @@ def submit():
     if len(additional_code_below) > 0:
         source_code_to_judge += '\n\n' + additional_code_below
 
-    cursor.execute('SELECT id_test_case, stdin, expected_output, feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
+    if only_samples:
+        cursor.execute('SELECT id_test_case, stdin, expected_output, feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 AND sample=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
+    else:
+        cursor.execute('SELECT id_test_case, stdin, expected_output, feedback, sample FROM test_cases WHERE id_problem=%(id_pro)s AND subproblem=1 ORDER BY sample DESC, id_problem ASC;', { 'id_pro': id_problem})
     
     tests_cases = cursor.fetchall()
-
     data = { "submissions": [] }
     additional_data = []
 
@@ -436,8 +454,10 @@ def submit():
             tokens_str += ',' if i < len(tokens) - 1 else ''
         
         fields = 'stdin,stdout,stderr,status,status_id,token,expected_output'
+        timeout = 20
+        timeout_start = time.time()
 
-        while True:
+        while time.time() < timeout_start + timeout:
             response = requests.get(url_judge0 + '/submissions/batch?tokens=' + tokens_str + '&base64_encoded=true&fields=' + fields)
             data = response.json()['submissions']
             cont = 0
@@ -492,122 +512,124 @@ def submit():
         percentage_correct = round(100 * correct / total, 2)
         give_feedback = 0
 
-        cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': session['user'] })
-        problem_solved = cursor.fetchone()[0]
+        if not only_samples:
+            cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND score=100 AND valid=True;', { 'id_pro': id_problem, 'email': session['user'] })
+            problem_solved = cursor.fetchone()[0]
 
-        tokens = ','.join(list_tokens)
-        insert_stmt = 'INSERT INTO submission_2 (id_problem, email, source_code, score, datetime, tokens, valid, verdict_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
-        data = (id_problem, session['user'], source_code, percentage_correct, datetime.now(), tokens, True, max(list_verdicts))
-        cursor.execute(insert_stmt, data)
-        conn.commit()
+            tokens = ','.join(list_tokens)
+            insert_stmt = 'INSERT INTO submission_2 (id_problem, email, source_code, score, datetime, tokens, valid, verdict_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+            data = (id_problem, session['user'], source_code, percentage_correct, datetime.now(), tokens, True, max(list_verdicts))
+            cursor.execute(insert_stmt, data)
+            conn.commit()
 
-        if problem_solved == 0:
-            cursor.execute('SELECT category FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_problem })
-            category_index = cursor.fetchone()[0]
+            if problem_solved == 0:
+                cursor.execute('SELECT category FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_problem })
+                category_index = cursor.fetchone()[0]
 
-            cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC;', { 'email': session['user'], 'cat': category_index })
-            current_distribution = cursor.fetchone() # esto fallara si no tiene una distribucion
-            current_level = current_distribution[0]
-            problem_ids = [x for x in current_distribution[1:]]
-            current_progress = {1: [0, 0], 2: [0, 0], 3: [0, 0]} # { level: [problems completely solved, total attempts minus problems completely solved] }
+                cursor.execute('SELECT level, id_problem_1, id_problem_2, id_problem_3, id_problem_4 FROM distribution WHERE email=%(email)s AND category=%(cat)s ORDER BY id_distribution DESC;', { 'email': session['user'], 'cat': category_index })
+                current_distribution = cursor.fetchone() # esto fallara si no tiene una distribucion
+                current_level = current_distribution[0]
+                problem_ids = [x for x in current_distribution[1:]]
+                current_progress = {1: [0, 0], 2: [0, 0], 3: [0, 0]} # { level: [problems completely solved, total attempts minus problems completely solved] }
 
-            for i in range(len(problem_ids)):
-                id_ = problem_ids[i]
-                cursor.execute('SELECT MAX(score), COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': id_, 'email': session['user'] })
-                score, attempts = cursor.fetchone()
-                score = 0.0 if score == None else score
-                cursor.execute('SELECT level FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_ })
-                level = cursor.fetchone()[0]
-                current_progress[level][0] += 1 if score == 100 else 0
-                current_progress[level][1] += attempts - 1 if score == 100 else attempts
+                for i in range(len(problem_ids)):
+                    id_ = problem_ids[i]
+                    cursor.execute('SELECT MAX(score), COUNT(*) FROM submission_2 WHERE id_problem=%(id_pro)s AND email=%(email)s AND valid=True;', { 'id_pro': id_, 'email': session['user'] })
+                    score, attempts = cursor.fetchone()
+                    score = 0.0 if score == None else score
+                    cursor.execute('SELECT level FROM problems WHERE id_problem=%(id_pro)s;', { 'id_pro': id_ })
+                    level = cursor.fetchone()[0]
+                    current_progress[level][0] += 1 if score == 100 else 0
+                    current_progress[level][1] += attempts - 1 if score == 100 else attempts
 
-            total_problems_solved = current_progress[1][0] + current_progress[2][0] + current_progress[3][0]
-            total_attempts = current_progress[1][1] + current_progress[2][1] + current_progress[3][1]
+                total_problems_solved = current_progress[1][0] + current_progress[2][0] + current_progress[3][0]
+                total_attempts = current_progress[1][1] + current_progress[2][1] + current_progress[3][1]
 
-            if current_level == 1:
-                if current_progress[1][0] == 2 or current_progress[2][0] == 1 or current_progress[2][0] == 1:
-                    progress = 1
-                elif total_problems_solved == 0 and total_attempts == 8:
-                    progress = -2
-                else:
-                    progress = 0
-            elif current_level == 2:
-                if current_progress[2][0] == 2 or current_progress[3][0] == 1:
-                    progress = 1
-                elif current_progress[1][1] == 2 or current_progress[2][1] == 4 or current_progress[3][1] == 4:
-                    progress = -1
-                else:
-                    progress = 0
-            else:
-                if current_progress[1][0] + current_progress[2][0] + current_progress[3][0] == 4:
-                    progress = 3
-                elif current_progress[1][1] == 2 or current_progress[2][1] == 2 or current_progress[3][1] == 4:
-                    progress = -1
-                else:
-                    progress = 0
-
-            if progress in [-2, -1, 1, 3]:
-                if progress == -1:
-                    new_level = 1 if current_level == 1 else current_level - 1
-                elif progress == 1:
-                    new_level = 3 if current_level == 3 else current_level + 1
-                else:
-                    new_level = current_level
-
-                new_distribution = []
-
-                if new_level == 1:
-                    new_distribution = [2, 1, 1]
-                elif new_level == 2:
-                    new_distribution = [1, 2, 1]
-                else:
-                    new_distribution = [1, 1, 2]
-
-                cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': session['user'], 'cat': category_index })
-
-                problem_ids = [str(x[0]) for x in cursor.fetchall()]
-                pro_set = ','.join(problem_ids)
-
-                ids_list = []
-
-                for i in range(len(new_distribution)):
-                    level = i + 1
-                    limit = new_distribution[i]
-                    if len(ids_list) > 0:
-                        cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN (' + pro_set + ') LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': limit })
+                if current_level == 1:
+                    if current_progress[1][0] == 2 or current_progress[2][0] == 1 or current_progress[2][0] == 1:
+                        progress = 1
+                    elif total_problems_solved == 0 and total_attempts == 8:
+                        progress = -2
                     else:
-                        cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': limit })
-                    ids = cursor.fetchall()
-                    pro_set = ','.join([str(x[0]) for x in ids])
+                        progress = 0
+                elif current_level == 2:
+                    if current_progress[2][0] == 2 or current_progress[3][0] == 1:
+                        progress = 1
+                    elif current_progress[1][1] == 2 or current_progress[2][1] == 4 or current_progress[3][1] == 4:
+                        progress = -1
+                    else:
+                        progress = 0
+                else:
+                    if current_progress[1][0] + current_progress[2][0] + current_progress[3][0] == 4:
+                        progress = 3
+                    elif current_progress[1][1] == 2 or current_progress[2][1] == 2 or current_progress[3][1] == 4:
+                        progress = -1
+                    else:
+                        progress = 0
 
-                    if len(ids) < limit:
-                        amount = limit - len(ids)
-                        cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN (' + pro_set + ') LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': amount })
-                        ids_list += [x[0] for x in cursor.fetchall()]
+                if progress in [-2, -1, 1, 3]:
+                    if progress == -1:
+                        new_level = 1 if current_level == 1 else current_level - 1
+                    elif progress == 1:
+                        new_level = 3 if current_level == 3 else current_level + 1
+                    else:
+                        new_level = current_level
+
+                    new_distribution = []
+
+                    if new_level == 1:
+                        new_distribution = [2, 1, 1]
+                    elif new_level == 2:
+                        new_distribution = [1, 2, 1]
+                    else:
+                        new_distribution = [1, 1, 2]
+
+                    cursor.execute('SELECT DISTINCT(submission_2.id_problem) FROM submission_2 JOIN problems ON submission_2.id_problem = problems.id_problem WHERE submission_2.email=%(email)s AND submission_2.score=100 AND problems.category=%(cat)s;', { 'email': session['user'], 'cat': category_index })
+
+                    problem_ids = [str(x[0]) for x in cursor.fetchall()]
+                    pro_set = ','.join(problem_ids)
+
+                    ids_list = []
+
+                    for i in range(len(new_distribution)):
+                        level = i + 1
+                        limit = new_distribution[i]
+                        if len(ids_list) > 0:
+                            cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN (' + pro_set + ') LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': limit })
+                        else:
+                            cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': limit })
+                        ids = cursor.fetchall()
+                        pro_set = ','.join([str(x[0]) for x in ids])
+
+                        if len(ids) < limit:
+                            amount = limit - len(ids)
+                            cursor.execute('SELECT id_problem FROM problems WHERE category=%(cat)s AND level=%(lvl)s AND id_problem NOT IN (' + pro_set + ') LIMIT %(lim)s;', { 'cat': category_index, 'lvl': level, 'lim': amount })
+                            ids_list += [x[0] for x in cursor.fetchall()]
+                        
+                        ids_list += [x[0] for x in ids]
                     
-                    ids_list += [x[0] for x in ids]
-                
-                id_problem_1, id_problem_2, id_problem_3, id_problem_4 = ids_list
+                    id_problem_1, id_problem_2, id_problem_3, id_problem_4 = ids_list
 
-                insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
-                data = (session['user'], category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime.now())
-                cursor.execute(insert_stmt, data)
-                conn.commit()
+                    insert_stmt = 'INSERT INTO distribution (email, category, level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+                    data = (session['user'], category_index, new_level, id_problem_1, id_problem_2, id_problem_3, id_problem_4, datetime.now())
+                    cursor.execute(insert_stmt, data)
+                    conn.commit()
 
-                cursor.execute('UPDATE submission_2 SET valid=0 WHERE email=%(email)s;', { 'email': session['user'] })
-                conn.commit()
-        else:
-            progress = 2
-        
-        if problem_solved or status == 3:
-            cursor.execute('SELECT COUNT(*) FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': id_problem, 'email': session['user'] })
-            give_feedback = 1 if cursor.fetchone()[0] == 0 else 0
+                    cursor.execute('UPDATE submission_2 SET valid=0 WHERE email=%(email)s;', { 'email': session['user'] })
+                    conn.commit()
+            else:
+                progress = 2
+            
+            if problem_solved or status == 3:
+                cursor.execute('SELECT COUNT(*) FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': id_problem, 'email': session['user'] })
+                give_feedback = 1 if cursor.fetchone()[0] == 0 else 0
 
         dicc['details'] = {
             'status': status,
             'progress': progress,
             'percentage_correct': percentage_correct,
-            'give_feedback': give_feedback
+            'give_feedback': give_feedback,
+            'only_samples': only_samples
         }
 
         for item in dicc['submissions']:
@@ -724,29 +746,30 @@ def user_progress():
 @app.route('/submissions', methods=['GET'])
 @app.route('/submissions/<int:page>', methods=['GET'])
 def submissions(page=None):
+    if 'user' not in session:
+        return render_template('not_authorized.html', page_title='Acceso denegado')
+
     page_title = 'Envíos'
     submissions = []
-    logged_in = False
-    
-    if 'user' in session:
-        conn = mysql.connect()
-        cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC;', { 'email': session['user'] })
-        submissions_length = cursor.fetchone()[0]
-        submissions_per_page = 100
-        offset = 0
-        max_pages = int(submissions_length / submissions_per_page) + 1
+    logged_in = False    
+    conn = mysql.connect()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC;', { 'email': session['user'] })
+    submissions_length = cursor.fetchone()[0]
+    submissions_per_page = 100
+    offset = 0
+    max_pages = int(submissions_length / submissions_per_page) + 1
 
-        if page != None:
-            if page >= 1 and page <= max_pages:
-                offset = submissions_per_page * (page - 1)
-            else:
-                return redirect(url_for('submissions'))
+    if page != None:
+        if page >= 1 and page <= max_pages:
+            offset = submissions_per_page * (page - 1)
+        else:
+            return redirect(url_for('submissions'))
 
-        cursor.execute('SELECT submission_2.id_submission, problems.title, submission_2.score, submission_2.datetime FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC LIMIT %(lim)s OFFSET %(off)s;', { 'email': session['user'], 'lim': submissions_per_page, 'off': offset })
-        submissions = cursor.fetchall()
-        logged_in = True
-        current_page = 1 if page == None else page
+    cursor.execute('SELECT submission_2.id_submission, problems.title, submission_2.score, submission_2.datetime FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem WHERE email=%(email)s ORDER BY id_submission DESC LIMIT %(lim)s OFFSET %(off)s;', { 'email': session['user'], 'lim': submissions_per_page, 'off': offset })
+    submissions = cursor.fetchall()
+    logged_in = True
+    current_page = 1 if page == None else page
     return render_template('submissions.html', page_title=page_title, submissions=submissions, logged_in=logged_in, current_page=current_page, max_pages=max_pages)
 
 @app.route('/launch', methods=['POST'])
@@ -786,5 +809,7 @@ def scheduled_task():
     cursor.execute('UPDATE feedback SET status=0 WHERE status=1')
     conn.commit()
 
-#scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
-#scheduler.start()
+'''
+scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
+scheduler.start()
+'''

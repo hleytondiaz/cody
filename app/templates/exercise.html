@@ -71,9 +71,12 @@
 			<span id="validation" class="text-danger fw-bold">El código debe tener al menos 10 caracteres.</span>
 		</div>
 		<div class="mb-4" style="text-align: right;">
-			<a class="btn btn-light" role="button" href={{ url_for('exercises', category=category) }}>Volver</a>
+			<button type="button" id="test" class="btn btn-dark">
+				<span class="spinner-border spinner-border-sm" id="test-loader" role="status" aria-hidden="true" hidden></span>
+				Probar
+			</button>
 			<button type="button" id="submit" class="btn btn-primary">
-				<span class="spinner-border spinner-border-sm" id="loader" role="status" aria-hidden="true" hidden></span>
+				<span class="spinner-border spinner-border-sm" id="submit-loader" role="status" aria-hidden="true" hidden></span>
 				Enviar
 			</button>
 		</div>
@@ -176,55 +179,64 @@
 			});
 			editor.session.setMode("ace/mode/python");
 
-			$("#submit").click(function() {
+			let badgesModal = new bootstrap.Modal(document.getElementById('badgesModal'));
+
+			function submitCode(for_samples) {
 				var idProblem = document.getElementById("id_problem").value;
 				var sourceCode = editor.getValue();
 				if (sourceCode.trim().length > 0) {
 					$.ajax({
 						url: window.location.origin + '/api/submit',
-						data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode }),
+						data: JSON.stringify({ id_problem: idProblem, source_code: sourceCode, only_samples: for_samples }),
 						type: 'POST',
 						contentType: 'application/json',
 						dataType: 'json',
 						beforeSend: function() {
-							$("#loader").attr("hidden", false);
+							if (for_samples) {
+								$("#test-loader").attr("hidden", false);
+							} else {
+								$("#submit-loader").attr("hidden", false);
+							}
 							$("#submit").attr("disabled", true);
+							$("#test").attr("disabled", true);
 							$("#validation").attr("hidden", true);
 							$("#verdict").empty();
 							$("#results").empty();
 						},
 						success : function(json) {
 							let verdictDetails = json['details'];
-							if (verdictDetails['percentage_correct'] == 0) {
-								$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
-							} else if (verdictDetails['percentage_correct'] < 100) {
-								$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
-							} else {
-								$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
-							}
+							if (verdictDetails['only_samples'] == false) {
+								if (verdictDetails['percentage_correct'] == 0) {
+									$("#verdict").append('<div class="alert alert-danger" id="verdict-div" role="alert"><h4 class="alert-heading">¡Oh no!</h4></div>');
+								} else if (verdictDetails['percentage_correct'] < 100) {
+									$("#verdict").append('<div class="alert alert-warning" id="verdict-div" role="alert"><h4 class="alert-heading">¡Casi!</h4></div>');
+								} else {
+									$("#verdict").append('<div class="alert alert-success" id="verdict-div" role="alert"><h4 class="alert-heading">¡Muy bien!</h4></div>');
+								}
 
-							$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
+								$("#verdict-div").append('<p>Tu nivel de acierto es de un ' + verdictDetails['percentage_correct'].toString() + '% de acuerdo a la cantidad de casos de prueba propuestos.</p><hr>');
 
-							let message = '';
+								let message = '';
 
-							if (verdictDetails['progress'] == -2) {
-								message = 'Debido a tus constantes intentos fallidos, tu distribución de ejercicios ha cambiado.';
-							} else if (verdictDetails['progress'] == -1) {
-								message = 'Debido a tus intentos fallidos, has retrocedido de nivel.';
-							} else if (verdictDetails['progress'] == 0) {
-								message = 'Por ahora te mantendrás en el mismo nivel actual.';
-							} else if (verdictDetails['progress'] == 1) {
-								message = 'Has avanzado al siguiente nivel.'
-							} else if (verdictDetails['progress'] == 2) {
-								message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
-							} else {
-								message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
-							}
+								if (verdictDetails['progress'] == -2) {
+									message = 'Debido a tus constantes intentos fallidos, tu distribución de ejercicios ha cambiado.';
+								} else if (verdictDetails['progress'] == -1) {
+									message = 'Debido a tus intentos fallidos, has retrocedido de nivel.';
+								} else if (verdictDetails['progress'] == 0) {
+									message = 'Por ahora te mantendrás en el mismo nivel actual.';
+								} else if (verdictDetails['progress'] == 1) {
+									message = 'Has avanzado al siguiente nivel.'
+								} else if (verdictDetails['progress'] == 2) {
+									message = 'Este problema ya lo has resuelto previamente, así que te mantendrás en el mismo nivel.';
+								} else {
+									message = 'Has resuelto todos los problemas propuestos, mantienes tu nivel, pero un nuevo conjunto de problemas ha sido generado.';
+								}
 
-							$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
+								$("#verdict-div").append('<p class="mb-0">' + message + '</p>');
 
-							if (verdictDetails['give_feedback'] == 1) {
-								$("#div-submit-feedback").attr("hidden", false);
+								if (verdictDetails['give_feedback'] == 1) {
+									$("#div-submit-feedback").attr("hidden", false);
+								}
 							}
 
 							$("#results").append('<div class="card mb-4" id="card-results"></div>');
@@ -243,7 +255,8 @@
 								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Entrada</td></tr>');
 								
 								if (arr[i - 1]['sample']) {
-									$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['stdin'] + '</pre></td></tr>');
+									let input = arr[i - 1]['stdin'].length > 0 ? arr[i - 1]['stdin'] : ' ';
+									$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + input + '</pre></td></tr>');
 								}
 								
 								$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
@@ -266,8 +279,9 @@
 								}
 								//$("tb-" + i.toString()).append('');
 							}
-							let badgesModal = new bootstrap.Modal(document.getElementById('badgesModal'));
-							checkBadges(badgesModal);
+							if (for_samples == false) {
+								checkBadges(badgesModal);
+							}
 						},
 						error : function(xhr, status) {
 							$("html, body").animate({
@@ -276,8 +290,13 @@
 							$("#results").append('<div class="alert alert-danger" role="alert" id="card-results">En este momento ha sido imposible establecer una comunicación con el sistema de juzgamiento. Por favor, intenta más tarde.</div>');
 						},
 						complete : function(xhr, status) {
-							$("#loader").attr("hidden", true);
+							if (for_samples) {
+								$("#test-loader").attr("hidden", true);
+							} else {
+								$("#submit-loader").attr("hidden", true);
+							}
 							$("#submit").attr("disabled", false);
+							$("#test").attr("disabled", false);
 							$("html, body").animate({
 								scrollTop: $("#verdict").offset().top
 							});
@@ -290,6 +309,14 @@
 					$("#validation").attr("hidden", false);
 					editor.focus();
 				}
+			}
+
+			$("#submit").click(function() {
+				submitCode(false);
+			});
+
+			$("#test").click(function() {
+				submitCode(true);
 			});
 
 			$("#submit-feedback").click(function() {
@@ -306,12 +333,11 @@
 						$("#submit-feedback").attr("disabled", true);
 					},
 					success : function(json) {
-						//console.log(json);
 						$("#form-submit-feedback").empty();
 						$("#form-submit-feedback").append('<b>¡Muchas gracias por tu retroalimentación!</b><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
+						checkBadges(badgesModal);
 					},
 					error : function(xhr, status) {
-						console.log('Error');
 					},
 					complete : function(xhr, status) {
 						$("#loader-submit-feedback").attr("hidden", true);
