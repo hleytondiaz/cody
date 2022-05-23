@@ -76,7 +76,7 @@
 {% block additional_javascript %}
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
 <script type="text/javascript">
-	var exampleModal = document.getElementById('exampleModal')
+	var exampleModal = document.getElementById('exampleModal');
 	exampleModal.addEventListener('show.bs.modal', function (event) {
 		var button = event.relatedTarget;
 		var idSubmission = button.getAttribute('data-id-submission');
@@ -133,7 +133,6 @@
 						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><p class="mb-0">' + arr[i - 1]['feedback'] + '</p></td></tr>');
 					}
 				}
-				console.log(arr);
 			},
 			error : function(xhr, status) {
 				$(".modal-body").empty();

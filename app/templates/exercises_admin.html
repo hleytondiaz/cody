@@ -1,1 +1,268 @@
-Admin ejercicios
+{% extends 'base.html' %}
+
+{% block title %}
+	{{ page_title }}
+{% endblock %}
+
+{% block body %}
+<div class="table-responsive">
+	<table class="table">
+		<thead>
+			<tr>
+				<th scope="col">ID</th>
+				<th scope="col">Título</th>
+				<th scope="col">Nivel Actual</th>
+				<th scope="col">Categoría</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for p in problems %}
+				<tr>
+					<td>{{ p[0] }}</td>
+					<td><a href="#" data-bs-toggle="modal" data-bs-target="#exampleModal" data-id-problem={{ p[0] }}>{{ p[1] }}</a></td>
+					<td>{{ p[3] }}</td>
+					<td>
+						<select onchange="changeCategory(this);" class="form-select form-select-sm" aria-label=".form-select-sm example">
+							<option{{ ' selected' if p[2] == 0 else '' }} value="{{ p[0] }},0">
+								Sin categoría
+							</option>
+							{% for i in range(categories|length) %}
+							<option{{ ' selected' if i + 1 == p[2] else '' }} value="{{ p[0] }},{{ i + 1 }}">
+								{{ categories[i][1] }}
+							</option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+<div>
+	<nav>
+		<ul class="pagination">
+			<li class="page-item{{ ' disabled' if current_page == 1 else '' }}">
+				<a class="page-link" href={{ url_for('admin', option='exercises', page=current_page-1) }}>Anterior</a>
+			</li>
+			<li class="page-item{{ ' disabled' if current_page == max_pages else '' }}">
+				<a class="page-link" href={{ url_for('admin', option='exercises', page=current_page+1) }}>Siguiente</a>
+			</li>
+		</ul>
+	</nav>
+</div>
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="exampleModalLabel"></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="row mb-4">
+					<div class="col-md-12 col-sm-12">
+						<div class="card text-dark bg-light">
+							<div class="card-body">
+								<strong>¿Qué nivel consideras para este problema?</strong>&nbsp;
+								<div class="form-check form-check-inline">
+									<input onchange="changeLevelProblem();" class="form-check-input" type="radio" id="inlineRadio1" name="inlineRadio" value="1">
+									<label class="form-check-label" for="inlineRadio1">Fácil</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input onchange="changeLevelProblem();" class="form-check-input" type="radio" id="inlineRadio2" name="inlineRadio" value="2">
+									<label class="form-check-label" for="inlineRadio2">Medio</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input onchange="changeLevelProblem();" class="form-check-input" type="radio" id="inlineRadio3" name="inlineRadio" value="3">
+									<label class="form-check-label" for="inlineRadio3">Difícil</label>
+								</div>
+								<input type="hidden" id="idProblemCheck">
+								<div id="responseCheck" class="fw-bold"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						<div id="modal-statement"></div>
+					</div>
+				</div>
+				<div class="row mb-2">
+					<div class="col">
+						<h6>Tarea</h6>
+						<div id="modal-task"></div>
+					</div>
+				</div>
+				<div class="row mb-2">
+					<div class="col">
+						<h6>Entrada</h6>
+						<div id="modal-input"></div>
+					</div>
+				</div>
+				<div class="row mb-2">
+					<div class="col">
+						<h6>Salida</h6>
+						<div id="modal-output"></div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						<h6>Observaciones</h6>
+						<div id="modal-observations"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+	<div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="d-flex">
+			<div class="toast-body"></div>
+			<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block additional_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.css">
+{% endblock %}
+{% block additional_javascript %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script type="text/javascript">
+	let toastLiveExample = document.getElementById('liveToast');
+	let toast = new bootstrap.Toast(toastLiveExample);
+	function changeCategory(selectObj) {
+		let idx = selectObj.selectedIndex; 
+		let which = selectObj.options[idx].value; 
+		let array = which.split(',');
+		let idProblem = parseInt(array[0]);
+		let idCategory = parseInt(array[1]);
+		$.ajax({
+			url: window.location.origin + '/api/update_category',
+			data: JSON.stringify({ id_problem: idProblem, id_category: idCategory }),
+			type: 'POST',
+			contentType: 'application/json',
+			dataType: 'json',
+			timeout: 3000,
+			beforeSend: function() {
+			},
+			success : function(json) {
+				$('#liveToast').removeClass('bg-danger');
+				$('#liveToast').addClass('bg-success');
+				$('.toast-body').text('¡Muy bien! La categoría fue asignada.');
+			},
+			error : function(xhr, status) {
+				$('#liveToast').removeClass('bg-success');
+				$('#liveToast').addClass('bg-danger');
+				$('.toast-body').text('¡Oh no! Inténtalo más tarde.');
+			},
+			complete : function(xhr, status) {
+				toast.show();
+			}
+		});
+	}
+
+	function format(str) {
+		let foo = marked.parse(str)
+		.replace('<table>', '<table class="table table-bordered>"')
+		.replace('<img', '<img class="mx-auto d-block"');
+		console.log(foo);
+		return foo;
+	}
+
+	let exampleModal = document.getElementById('exampleModal');
+	exampleModal.addEventListener('show.bs.modal', function (event) {
+		let link = event.relatedTarget;
+		let idProblem = link.getAttribute('data-id-problem');
+		$.ajax({
+			url: window.location.origin + '/api/get_problem',
+			data: JSON.stringify({ id_problem: idProblem }),
+			type: 'POST',
+			contentType: 'application/json',
+			dataType: 'json',
+			timeout: 3000,
+			beforeSend: function() {
+				$('#exampleModalLabel').text('');
+				$('#modal-statement').text('');
+				$('#responseCheck').text('');
+				$("#inlineRadio1").prop("checked", false);
+				$("#inlineRadio2").prop("checked", false);
+				$("#inlineRadio3").prop("checked", false);
+				$('#modal-task').text('');
+				$('#modal-input').text('');
+				$('#modal-output').text('');
+				$('#modal-observations').text('');
+			},
+			success : function(json) {
+				idProblem = json['problem'][0]
+				titleProblem = json['problem'][1];
+				statementProblem = json['problem'][2];
+				categoryProblem = json['problem'][3];
+				levelProblem = json['problem'][4];
+				selectedLevel = json['problem'][5];
+				textTask = json['problem'][6];
+				inputDescriptionTask = json['problem'][7];
+				outputDescriptionTask = json['problem'][8];
+				observationsTask = json['problem'][9];
+				document.getElementById('exampleModalLabel').innerHTML = titleProblem + ' <span class="badge bg-primary">' + categoryProblem + '</span>';
+				document.getElementById('modal-statement').innerHTML = format(statementProblem);
+				document.getElementById('modal-task').innerHTML = format(textTask);
+				document.getElementById('modal-input').innerHTML = format(inputDescriptionTask);
+				document.getElementById('modal-output').innerHTML = format(outputDescriptionTask);
+				document.getElementById('modal-observations').innerHTML = format(observationsTask);
+				renderMathInElement(document.body, {
+					delimiters: [
+						{left: "$$", right: "$$", display: true},
+						{left: "\\[", right: "\\]", display: true},
+						{left: "$", right: "$", display: false},
+						{left: "\\(", right: "\\)", display: false}
+					]
+				});
+				$('#modal-category').text(categoryProblem);
+				if (selectedLevel == 1) {
+					$("#inlineRadio1").prop("checked", true);
+				} else if (selectedLevel == 2) {
+					$("#inlineRadio2").prop("checked", true);
+				} else if (selectedLevel == 3) {
+					$("#inlineRadio3").prop("checked", true);
+				}
+				document.getElementById('idProblemCheck').value = idProblem;
+			},
+			error : function(xhr, status) {
+			},
+			complete : function(xhr, status) {
+			}
+		});
+	});
+
+	function changeLevelProblem() {
+		let valueIdProblemChecked = document.getElementById('idProblemCheck').value;
+		let valueRadioChecked = $('input:radio[name=inlineRadio]:checked').val();
+		$.ajax({
+			url: window.location.origin + '/api/update_level_problem_by_instructor',
+			data: JSON.stringify({ id_problem: valueIdProblemChecked, id_level: valueRadioChecked }),
+			type: 'POST',
+			contentType: 'application/json',
+			dataType: 'json',
+			timeout: 3000,
+			beforeSend: function() {
+				$('#responseCheck').removeClass('text-success');
+				$('#responseCheck').removeClass('text-danger');
+				$('#responseCheck').text('');
+			},
+			success : function(json) {
+				$('#responseCheck').addClass('text-success');
+				$('#responseCheck').text('¡Guardado!');
+			},
+			error : function(xhr, status) {
+				$('#responseCheck').addClass('text-danger');
+				$('#responseCheck').text('¡Oh no! Inténtalo más tarde.');
+			},
+			complete : function(xhr, status) {
+			}
+		});
+	}
+</script>
+{% endblock %}

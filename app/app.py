@@ -306,14 +306,40 @@ def profile():
     page_title = 'Perfil'
     return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups, badges=badges)
 
-'''
 @app.route('/admin/<string:option>', methods=['GET'])
-def admin(option=None):
+@app.route('/admin/<string:option>/<int:page>', methods=['GET'])
+def admin(option=None, page=None):
+    conn = mysql.connect()
+    cursor = conn.cursor()
     if option == 'exercises':
-        return render_template('exercises_admin.html')
+        cursor.execute('SELECT COUNT(*) FROM problems;')
+        submissions_length = cursor.fetchone()[0]
+        submissions_per_page = 50
+        offset = 0
+        max_pages = int(submissions_length / submissions_per_page) + 1
+
+        if page != None:
+            if page >= 1 and page <= max_pages:
+                offset = submissions_per_page * (page - 1)
+            else:
+                return redirect(url_for('admin', option='exercises'))
+        
+        cursor.execute('SELECT id_problem, title, category, level FROM problems ORDER BY id_problem ASC LIMIT %(lim)s OFFSET %(off)s;', { 'lim': submissions_per_page, 'off': offset })
+        current_page = 1 if page == None else page
+        problems = []
+        max_characters = 60
+        levels = ['Fácil', 'Medio', 'Difícil']
+        
+        for p in cursor.fetchall():
+            id_problem, title, category, level = p
+            title = title if len(title) <= max_characters else title[:max_characters] + '...'
+            level = levels[level - 1] if level > 0 else 'Sin Nivel'
+            problems.append([id_problem, title, category, level])
+        page_title = 'Administración de Ejercicios'
+        
+        return render_template('exercises_admin.html', page_title=page_title, problems=problems, categories=categories, current_page=current_page, max_pages=max_pages)
     if option == 'groups':
         return render_template('groups.html')
-'''
 
 @app.route('/api/badges_earned', methods=['POST'])
 def badges_earned():
@@ -382,6 +408,61 @@ def update_group():
         cursor.execute('UPDATE users SET id_group=%(group)s WHERE id_user=%(user)s', { 'group': body['group'], 'user': session['user'] })
         conn.commit()
         return { 'message': 'ok' }, 200
+    else:
+        return { 'message': 'no_ok' }, 400
+
+@app.route('/api/get_problem', methods=['POST'])
+def get_problem():
+    body = request.get_json()
+    if body is None:
+        return 'The request body is null', 400
+    if 'id_problem' not in body:
+        return 'You need to specify the id_problem', 400
+    if 'user' in session:
+        if session['role'] == 'instructor':
+            conn = mysql.connect()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id_problem, title, statement, category, level FROM problems WHERE id_problem=%(id_pro)s', { 'id_pro': body['id_problem'] })
+            data = [x for x in cursor.fetchone()]
+            data[3] = categories[data[3] - 1][1] if data[3] > 0 else 'Sin Categoría'
+            cursor.execute('SELECT level FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': body['id_problem'], 'email': session['user'] })
+            selected_level = cursor.fetchone()
+            data.append(selected_level[0] if selected_level != None else 0)
+            cursor.execute('SELECT text, input_description, output_description, observations FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': body['id_problem'] })
+            data += [x for x in cursor.fetchone()]
+            print(data)
+            return { 'problem': data }, 200
+        else:
+            return { 'message': 'no_ok' }, 400
+    else:
+        return { 'message': 'no_ok' }, 400
+
+@app.route('/api/update_level_problem_by_instructor', methods=['POST'])
+def update_level_problem_by_instructor():
+    body = request.get_json()
+    if body is None:
+        return 'The request body is null', 400
+    if 'id_problem' not in body:
+        return 'You need to specify the id_problem', 400
+    if 'id_level' not in body:
+        return 'You need to specify the id_level', 400
+    if 'user' in session:
+        if session['role'] == 'instructor':
+            conn = mysql.connect()
+            cursor = conn.cursor()
+            cursor.execute('SELECT level FROM feedback WHERE id_problem=%(id_pro)s AND email=%(email)s;', { 'id_pro': body['id_problem'], 'email': session['user'] })
+            selected_level = cursor.fetchone()
+            if selected_level == None:
+                insert_stmt = 'INSERT INTO feedback (id_problem, email, level, status, datetime) VALUES (%s, %s, %s, %s, %s)'
+                data = (body['id_problem'], session['user'], body['id_level'], True, datetime.now())
+                cursor.execute(insert_stmt, data)
+                conn.commit()
+            else:
+                cursor.execute('UPDATE feedback SET level=%(lvl)s WHERE id_problem=%(id_pro)s AND email=%(email)s', { 'lvl': body['id_level'], 'id_pro': body['id_problem'], 'email': session['user'] })
+                conn.commit()
+            return { 'message': 'ok' }, 200
+        else:
+            return { 'message': 'no_ok' }, 400
     else:
         return { 'message': 'no_ok' }, 400
 
