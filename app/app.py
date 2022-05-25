@@ -261,7 +261,6 @@ def exercises(category=None, id_exercise=None):
             page_title = title if problem_allowed else 'Error'
             return render_template('exercise.html', page_title=page_title, url_judge0=url_judge0, problem_data=problem_data, subproblem_data=subproblem_data, tests_cases_data=tests_cases_data, category=category, problem_allowed=problem_allowed)
 
-'''
 @app.route('/progress', methods=['GET'])
 def progress():
     conn = mysql.connect()
@@ -287,7 +286,6 @@ def progress():
         categories_aux[i][0] = i + 1
     page_title = 'Progreso'
     return render_template('progress.html', page_title=page_title, categories=categories_aux, distribution_ids=distribution_ids, enumeration=enumeration, metrics=metrics, amount_by_status=amount_by_status)
-'''
 
 @app.route('/profile', methods=['GET'])
 def profile():
@@ -339,7 +337,34 @@ def admin(option=None, page=None):
         
         return render_template('exercises_admin.html', page_title=page_title, problems=problems, categories=categories, current_page=current_page, max_pages=max_pages)
     if option == 'groups':
-        return render_template('groups.html')
+        page_title = 'Administración de Paralelos'
+        cursor.execute('SELECT id_group FROM groups WHERE id_group != 0;')
+        groups = cursor.fetchall()
+        
+        cursor.execute('SELECT categories.category, COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category GROUP BY problems.category ORDER BY categories.id_category;')
+        submissions_quantity_summary = [list(x) for x in cursor.fetchall()]
+        for i in range(len(submissions_quantity_summary)):
+            for j in range(1, 4):
+                cursor.execute('SELECT COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category WHERE categories.id_category=' + str(i + 1) + ' AND problems.level=' + str(j) + ' GROUP BY problems.category ORDER BY categories.id_category;')
+                quantity = cursor.fetchone()
+                submissions_quantity_summary[i].append(0 if quantity == None else quantity[0])
+        
+        cursor.execute('SELECT submission_2.verdict_id, COUNT(*) FROM submission_2 GROUP BY submission_2.verdict_id ORDER BY submission_2.verdict_id;')
+        submissions_by_verdict = [list(x) for x in cursor.fetchall()]
+        sum_submissions = sum([x[1] for x in submissions_by_verdict])
+        response = requests.get(url_judge0 + '/statuses')
+        for r in response.json():
+            for i in range(len(submissions_by_verdict)):
+                if submissions_by_verdict[i][0] == r['id']:
+                    submissions_by_verdict[i][0] = r['description']
+                    if sum_submissions == 0:
+                        avg = 0.0
+                    else:
+                        avg = round(100 * (submissions_by_verdict[i][1] / sum_submissions), 2)
+                    submissions_by_verdict[i].append(avg)
+        print(submissions_quantity_summary)
+        print(submissions_by_verdict)
+        return render_template('groups.html', page_title=page_title, groups=groups)
 
 @app.route('/api/badges_earned', methods=['POST'])
 def badges_earned():

@@ -165,11 +165,9 @@
 	}
 
 	function format(str) {
-		let foo = marked.parse(str)
+		return marked.parse(str)
 		.replace('<table>', '<table class="table table-bordered>"')
 		.replace('<img', '<img class="mx-auto d-block"');
-		console.log(foo);
-		return foo;
 	}
 
 	let exampleModal = document.getElementById('exampleModal');
@@ -206,6 +204,7 @@
 				inputDescriptionTask = json['problem'][7];
 				outputDescriptionTask = json['problem'][8];
 				observationsTask = json['problem'][9];
+				if (observationsTask.length == 0) observationsTask = 'Sin observaciones.';
 				document.getElementById('exampleModalLabel').innerHTML = titleProblem + ' <span class="badge bg-primary">' + categoryProblem + '</span>';
 				document.getElementById('modal-statement').innerHTML = format(statementProblem);
 				document.getElementById('modal-task').innerHTML = format(textTask);
