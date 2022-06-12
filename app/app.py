@@ -363,8 +363,8 @@ def admin(option=None, page=None):
                         avg = round(100 * (submissions_by_verdict[i][1] / sum_submissions), 2)
                     submissions_by_verdict[i].append(avg)
         
-        print(submissions_quantity_summary)
         print(submissions_by_verdict)
+        print(submissions_quantity_summary)
         
         cursor.execute('SELECT categories.category, (SELECT COUNT(*) FROM distribution WHERE distribution.level=1 AND distribution.category=categories.id_category) AS basic, (SELECT COUNT(*) FROM distribution WHERE distribution.level=2 AND distribution.category=categories.id_category) AS medium, (SELECT COUNT(*) FROM distribution WHERE distribution.level=3 AND distribution.category=categories.id_category) AS hard, COUNT(*) AS total FROM distribution JOIN categories ON categories.id_category=distribution.category GROUP BY distribution.category ORDER BY distribution.category ASC;')
         badges = cursor.fetchall()
@@ -376,7 +376,13 @@ def admin(option=None, page=None):
 
         print(quiz_attempts)
 
-        return render_template('groups.html', page_title=page_title, groups=groups)
+        general_data = [0] * 6
+
+        general_data[1] = sum([x[1] for x in submissions_by_verdict])
+        general_data[2] = sum([x[4] for x in badges])
+        general_data[5] = sum([x[2] for x in quiz_attempts])
+
+        return render_template('groups.html', page_title=page_title, groups=groups, general_data=general_data, submissions_quantity_summary=submissions_quantity_summary, submissions_by_verdict=submissions_by_verdict, badges=badges, quiz_attempts=quiz_attempts)
 
 @app.route('/api/badges_earned', methods=['POST'])
 def badges_earned():

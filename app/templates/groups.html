@@ -28,34 +28,34 @@
 									<td>
 										<b>Usuarios</b>
 									</td>
-									<td style="text-align: right;"></td>
+									<td style="text-align: right;">{{ general_data[0] }}</td>
 									<td>&nbsp;</td>
 									<td>
 										<b>Envíos</b>
 									</td>
-									<td style="text-align: right;"></td>
+									<td style="text-align: right;">{{ general_data[1] }}</td>
 								</tr>
 								<tr>
 									<td>
 										<b>Insignias</b>
 									</td>
-									<td style="text-align: right;">7</td>
+									<td style="text-align: right;">{{ general_data[2] }}</td>
 									<td>&nbsp;</td>
 									<td>
 										<b>Distribuciones</b>
 									</td>
-									<td style="text-align: right;"></td>
+									<td style="text-align: right;">{{ general_data[3] }}</td>
 								</tr>
 								<tr>
 									<td>
 										<b>Feedbacks</b>
 									</td>
-									<td></td>
+									<td style="text-align: right;">{{ general_data[4] }}</td>
 									<td>&nbsp;</td>
 									<td>
 										<b>Quizzes</b>
 									</td>
-									<td></td>
+									<td style="text-align: right;">{{ general_data[5] }}</td>
 								</tr>
 							</tbody>
 						</table>
@@ -70,40 +70,44 @@
 				<h6 class="card-header">Envíos</h6>
 				<div class="card-body">
 					<div class="table-responsive">
-						<table class="table table-borderless caption-top">
+						<table class="table table-bordered caption-top">
 							<caption>Veredictos</caption>
-							<thead>
+							<thead class="table-light">
 								<th>Veredicto</th>
-								<th>Porcentaje</th>
-								<th>Total</th>
+								<th style="text-align: center;">Porcentaje</th>
+								<th style="text-align: center;">Total</th>
 							</thead>
 							<tbody>
+								{% for item in submissions_by_verdict %}
 								<tr>
-									<td>dasdaf</td>
-									<td>1</td>
-									<td>1</td>
+									<td>{{ item[0] }}</td>
+									<td style="text-align: right;">{{ item[2] }}%</td>
+									<td style="text-align: right;">{{ item[1] }}</td>
 								</tr>
+								{% endfor %}
 							</tbody>
 						</table>
 					</div>
 					<div class="table-responsive">
-						<table class="table table-borderless caption-top">
+						<table class="table table-bordered caption-top">
 							<caption>Categorías</caption>
-							<thead>
+							<thead class="table-light">
 								<th>Categoría</th>
-								<th>Fácil</th>
-								<th>Medio</th>
-								<th>Difícil</th>
-								<th>Total</th>
+								<th style="text-align: center;">Fácil</th>
+								<th style="text-align: center;">Medio</th>
+								<th style="text-align: center;">Difícil</th>
+								<th style="text-align: center;">Total</th>
 							</thead>
 							<tbody>
+							{% for item in submissions_quantity_summary %}
 								<tr>
-									<td></td>
-									<td></td>
-									<td></td>
-									<td></td>
-									<td></td>
+									<td>{{ item[0] }}</td>
+									<td style="text-align: right;">{{ item[2] }}</td>
+									<td style="text-align: right;">{{ item[3] }}</td>
+									<td style="text-align: right;">{{ item[4] }}</td>
+									<td style="text-align: right;">{{ item[1] }}</td>
 								</tr>
+							{% endfor %}
 							</tbody>
 						</table>
 					</div>
@@ -117,9 +121,26 @@
 				<h6 class="card-header">Insignias</h6>
 				<div class="card-body">
 					<div class="table-responsive">
-						<table class="table table-borderless caption-top">
+						<table class="table table-bordered caption-top">
 							<caption>Insignias</caption>
-							
+							<thead class="table-light">
+								<th>Categoría</th>
+								<th style="text-align: center;">Fácil</th>
+								<th style="text-align: center;">Medio</th>
+								<th style="text-align: center;">Difícil</th>
+								<th style="text-align: center;">Total</th>
+							</thead>
+							<tbody>
+							{% for item in badges %}
+								<tr>
+									<td>{{ item[0] }}</td>
+									<td style="text-align: right;">{{ item[1] }}</td>
+									<td style="text-align: right;">{{ item[2] }}</td>
+									<td style="text-align: right;">{{ item[3] }}</td>
+									<td style="text-align: right;">{{ item[4] }}</td>
+								</tr>
+							{% endfor %}
+							</tbody>							
 						</table>
 					</div>
 				</div>
@@ -129,12 +150,25 @@
 	<div class="row mb-4">
 		<div class="col-12">
 			<div class="card">
-				<h6 class="card-header">Distruciones</h6>
+				<h6 class="card-header">Quizzes</h6>
 				<div class="card-body">
 					<div class="table-responsive">
-						<table class="table table-borderless caption-top">
-							<caption>Distruciones</caption>
-							
+						<table class="table table-bordered caption-top">
+							<caption>Quizzes</caption>
+							<thead class="table-light">
+								<th>Veredicto</th>
+								<th style="text-align: center;">Promedio</th>
+								<th style="text-align: center;">Total</th>
+							</thead>
+							<tbody>
+							{% for item in quiz_attempts %}
+								<tr>
+									<td>{{ item[0] }}</td>
+									<td style="text-align: right;">{{ item[1] }}</td>
+									<td style="text-align: right;">{{ item[2] }}</td>
+								</tr>
+							{% endfor %}
+							</tbody>							
 						</table>
 					</div>
 				</div>
