@@ -305,11 +305,12 @@ def profile():
     return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups, badges=badges)
 
 @app.route('/admin/<string:option>', methods=['GET'])
-@app.route('/admin/<string:option>/<int:page>', methods=['GET'])
-def admin(option=None, page=None):
+@app.route('/admin/<string:option>/<int:number>', methods=['GET'])
+def admin(option=None, number=None):
     conn = mysql.connect()
     cursor = conn.cursor()
     if option == 'exercises':
+        page = number
         cursor.execute('SELECT COUNT(*) FROM problems;')
         submissions_length = cursor.fetchone()[0]
         submissions_per_page = 50
@@ -340,16 +341,29 @@ def admin(option=None, page=None):
         page_title = 'Administración de Paralelos'
         cursor.execute('SELECT id_group FROM groups WHERE id_group != 0;')
         groups = cursor.fetchall()
+
+        id_group = number
+
+        if id_group == None:
+            id_group = 0
         
-        cursor.execute('SELECT categories.category, COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category GROUP BY problems.category ORDER BY categories.id_category;')
+        print('id_group:', id_group)
+
+        add = '(' + str(id_group) + ')'
+        if id_group == 0:
+            add = '(' + ','.join([str(x[0]) for x in groups]) + ')'
+        
+        cursor.execute('SELECT categories.category, COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category JOIN users ON users.id_user=submission_2.email WHERE users.id_group IN ' + add + ' GROUP BY problems.category ORDER BY categories.id_category;')
         submissions_quantity_summary = [list(x) for x in cursor.fetchall()]
         for i in range(len(submissions_quantity_summary)):
             for j in range(1, 4):
-                cursor.execute('SELECT COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category WHERE categories.id_category=' + str(i + 1) + ' AND problems.level=' + str(j) + ' GROUP BY problems.category ORDER BY categories.id_category;')
+                cursor.execute('SELECT COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category JOIN users ON users.id_user=submission_2.email WHERE categories.id_category=' + str(i + 1) + ' AND problems.level=' + str(j) + ' AND users.id_group IN ' + add + ' GROUP BY problems.category ORDER BY categories.id_category;')
                 quantity = cursor.fetchone()
                 submissions_quantity_summary[i].append(0 if quantity == None else quantity[0])
         
-        cursor.execute('SELECT submission_2.verdict_id, COUNT(*) FROM submission_2 GROUP BY submission_2.verdict_id ORDER BY submission_2.verdict_id;')
+        print('submissions_quantity_summary:', submissions_quantity_summary)
+
+        cursor.execute('SELECT submission_2.verdict_id, COUNT(*) FROM submission_2 JOIN users ON users.id_user=submission_2.email WHERE users.id_group IN ' + add + ' GROUP BY submission_2.verdict_id ORDER BY submission_2.verdict_id;')
         submissions_by_verdict = [list(x) for x in cursor.fetchall()]
         sum_submissions = sum([x[1] for x in submissions_by_verdict])
         response = requests.get(url_judge0 + '/statuses')
@@ -363,26 +377,45 @@ def admin(option=None, page=None):
                         avg = round(100 * (submissions_by_verdict[i][1] / sum_submissions), 2)
                     submissions_by_verdict[i].append(avg)
         
-        print(submissions_by_verdict)
-        print(submissions_quantity_summary)
-        
-        cursor.execute('SELECT categories.category, (SELECT COUNT(*) FROM distribution WHERE distribution.level=1 AND distribution.category=categories.id_category) AS basic, (SELECT COUNT(*) FROM distribution WHERE distribution.level=2 AND distribution.category=categories.id_category) AS medium, (SELECT COUNT(*) FROM distribution WHERE distribution.level=3 AND distribution.category=categories.id_category) AS hard, COUNT(*) AS total FROM distribution JOIN categories ON categories.id_category=distribution.category GROUP BY distribution.category ORDER BY distribution.category ASC;')
+        print('submissions_by_verdict:', submissions_by_verdict)
+
+        cursor.execute('SELECT categories.category, COUNT(*) FROM distribution JOIN categories ON categories.id_category=distribution.category JOIN users ON users.id_user=distribution.email WHERE users.id_group IN ' + add + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
+
+        distributions = [list(x) for x in cursor.fetchall()]
+
+        for i in range(len(distributions)):
+            for j in range(1, 4):
+                cursor.execute('SELECT COUNT(*) FROM distribution JOIN categories ON categories.id_category=distribution.category JOIN users ON users.id_user=distribution.email WHERE users.id_group IN ' + add + ' AND distribution.level=' + str(j) + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
+                quantity = cursor.fetchone()
+                distributions[i].append(0 if quantity == None else quantity[0])
+
+        print('distributions:', distributions)
+
+        cursor.execute('SELECT badges.description, COUNT(*) FROM badges_users JOIN users ON users.id_user=badges_users.email JOIN badges ON badges.id_badge=badges_users.id_badge WHERE users.id_group IN ' + add + ' GROUP BY badges.id_badge ORDER BY badges.id_badge ASC;')
         badges = cursor.fetchall()
 
-        print(badges)
+        print('badges:', badges)
 
-        cursor.execute('SELECT categories.category, (SELECT ROUND(AVG(quiz_attempts.score_obtained), 2) FROM quiz_attempts WHERE quiz_attempts.category=categories.id_category) AS mean, COUNT(*) AS total FROM quiz_attempts JOIN categories ON categories.id_category=quiz_attempts.category GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
+        cursor.execute('SELECT categories.category, (SELECT ROUND(AVG(quiz_attempts.score_obtained), 2) FROM quiz_attempts JOIN users ON users.id_user=quiz_attempts.email WHERE quiz_attempts.category=categories.id_category AND users.id_group IN ' + add + ') AS mean, COUNT(*) AS total FROM quiz_attempts JOIN categories ON categories.id_category=quiz_attempts.category JOIN users ON users.id_user=quiz_attempts.email WHERE users.id_group IN ' + add + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
         quiz_attempts = cursor.fetchall()
 
-        print(quiz_attempts)
+        print('quiz_attempts:', quiz_attempts)
 
         general_data = [0] * 6
 
+        cursor.execute('SELECT COUNT(*) FROM users WHERE id_group IN ' + add + ';')
+        general_data[0] = cursor.fetchone()[0]
+
         general_data[1] = sum([x[1] for x in submissions_by_verdict])
-        general_data[2] = sum([x[4] for x in badges])
+        general_data[2] = sum([x[1] for x in badges])
+        general_data[3] = sum([x[4] for x in distributions])
+
+        cursor.execute('SELECT COUNT(*) FROM feedback JOIN users ON users.id_user=feedback.email WHERE users.id_group IN ' + add + ';')
+        general_data[4] = cursor.fetchone()[0]
+
         general_data[5] = sum([x[2] for x in quiz_attempts])
 
-        return render_template('groups.html', page_title=page_title, groups=groups, general_data=general_data, submissions_quantity_summary=submissions_quantity_summary, submissions_by_verdict=submissions_by_verdict, badges=badges, quiz_attempts=quiz_attempts)
+        return render_template('groups.html', page_title=page_title, groups=groups, general_data=general_data, submissions_quantity_summary=submissions_quantity_summary, submissions_by_verdict=submissions_by_verdict, badges=badges, distributions=distributions, quiz_attempts=quiz_attempts)
 
 @app.route('/api/badges_earned', methods=['POST'])
 def badges_earned():

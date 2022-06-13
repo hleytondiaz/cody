@@ -7,10 +7,10 @@
 {% block body %}
 	<div class="row mb-4">
 		<div class="col-12">
-			<select class="form-select form-select-sm" style="width: 25%;">
+			<select id="form-select-group" class="form-select form-select-sm" style="width: 25%;">
 				<option value="0">Todos</option>
 				{% for p in groups %}
-					<option value="{{ p }}">Paralelo {{ p[0] }}</option>
+					<option value="{{ p[0] }}">Paralelo {{ p[0] }}</option>
 				{% endfor %}
 			</select>
 		</div>
@@ -85,6 +85,11 @@
 									<td style="text-align: right;">{{ item[1] }}</td>
 								</tr>
 								{% endfor %}
+							{% if submissions_by_verdict|length == 0 %}
+								<tr class="table-warning">
+									<td colspan="3" style="text-align: center;">No se ha realizado ningún envío.</td>
+								</tr>
+							{% endif %}
 							</tbody>
 						</table>
 					</div>
@@ -108,7 +113,49 @@
 									<td style="text-align: right;">{{ item[1] }}</td>
 								</tr>
 							{% endfor %}
+							{% if submissions_quantity_summary|length == 0 %}
+								<tr class="table-warning">
+									<td colspan="5" style="text-align: center;">No se ha realizado ningún envío.</td>
+								</tr>
+							{% endif %}
 							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row mb-4">
+		<div class="col-12">
+			<div class="card">
+				<h6 class="card-header">Distribuciones</h6>
+				<div class="card-body">
+					<div class="table-responsive">
+						<table class="table table-bordered caption-top">
+							<caption>Distribuciones</caption>
+							<thead class="table-light">
+								<th>Categoría</th>
+								<th style="text-align: center;">Fácil</th>
+								<th style="text-align: center;">Medio</th>
+								<th style="text-align: center;">Difícil</th>
+								<th style="text-align: center;">Total</th>
+							</thead>
+							<tbody>
+							{% for item in distributions %}
+								<tr>
+									<td>{{ item[0] }}</td>
+									<td style="text-align: right;">{{ item[2] }}</td>
+									<td style="text-align: right;">{{ item[3] }}</td>
+									<td style="text-align: right;">{{ item[4] }}</td>
+									<td style="text-align: right;">{{ item[1] }}</td>
+								</tr>
+							{% endfor %}
+							{% if distributions|length == 0 %}
+								<tr class="table-warning">
+									<td colspan="5" style="text-align: center;">No se ha obtenido ninguna distribución.</td>
+								</tr>
+							{% endif %}
+							</tbody>							
 						</table>
 					</div>
 				</div>
@@ -124,22 +171,21 @@
 						<table class="table table-bordered caption-top">
 							<caption>Insignias</caption>
 							<thead class="table-light">
-								<th>Categoría</th>
-								<th style="text-align: center;">Fácil</th>
-								<th style="text-align: center;">Medio</th>
-								<th style="text-align: center;">Difícil</th>
-								<th style="text-align: center;">Total</th>
+								<th>Descripción</th>
+								<th style="text-align: center;">Cantidad</th>
 							</thead>
 							<tbody>
 							{% for item in badges %}
 								<tr>
 									<td>{{ item[0] }}</td>
 									<td style="text-align: right;">{{ item[1] }}</td>
-									<td style="text-align: right;">{{ item[2] }}</td>
-									<td style="text-align: right;">{{ item[3] }}</td>
-									<td style="text-align: right;">{{ item[4] }}</td>
 								</tr>
 							{% endfor %}
+							{% if badges|length == 0 %}
+								<tr class="table-warning">
+									<td colspan="2" style="text-align: center;">No se ha obtenido ninguna insignia.</td>
+								</tr>
+							{% endif %}
 							</tbody>							
 						</table>
 					</div>
@@ -168,6 +214,11 @@
 									<td style="text-align: right;">{{ item[2] }}</td>
 								</tr>
 							{% endfor %}
+							{% if quiz_attempts|length == 0 %}
+								<tr class="table-warning">
+									<td colspan="3" style="text-align: center;">No se ha realizado ningún quiz.</td>
+								</tr>
+							{% endif %}
 							</tbody>							
 						</table>
 					</div>
@@ -181,4 +232,29 @@
 {% endblock %}
 
 {% block additional_javascript %}
+	<script type="text/javascript">
+	let idGroup = window.location.href.split('/')[5];
+	if (idGroup == undefined) idGroup = 0;
+	$("#form-select-group").val(idGroup);
+
+	$('#form-select-group').change(function() {
+		let selectedOption = $(this).val();
+		let arr = window.location.href.split('/');
+		arr[1] = '//';
+		if (arr.length == 6) arr.pop();
+		arr.push(selectedOption.toString());
+	
+		if (selectedOption == 0) {
+			arr.pop();
+		}
+
+		if (arr[5] == undefined) {
+			idGroupAdd = '';
+		} else {
+			idGroupAdd = '/' + arr[5];
+		}
+
+		window.location.href = arr[0] + arr[1] + arr[2] + '/' + arr[3] + '/' + arr[4] + idGroupAdd;
+	});
+	</script>
 {% endblock %}
