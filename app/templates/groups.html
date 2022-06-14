@@ -8,9 +8,11 @@
 	<div class="row mb-4">
 		<div class="col-12">
 			<select id="form-select-group" class="form-select form-select-sm" style="width: 25%;">
-				<option value="0">Todos</option>
+				<option value="-1">Todos</option>
 				{% for p in groups %}
-					<option value="{{ p[0] }}">Paralelo {{ p[0] }}</option>
+					<option value="{{ p[0] }}">
+						{{ 'Sin Paralelo' if p[0] == 0 else 'Paralelo ' ~ p[0] }}
+					</option>
 				{% endfor %}
 			</select>
 		</div>
@@ -234,7 +236,7 @@
 {% block additional_javascript %}
 	<script type="text/javascript">
 	let idGroup = window.location.href.split('/')[5];
-	if (idGroup == undefined) idGroup = 0;
+	if (idGroup == undefined) idGroup = -1;
 	$("#form-select-group").val(idGroup);
 
 	$('#form-select-group').change(function() {
@@ -244,7 +246,7 @@
 		if (arr.length == 6) arr.pop();
 		arr.push(selectedOption.toString());
 	
-		if (selectedOption == 0) {
+		if (selectedOption == -1) {
 			arr.pop();
 		}
 

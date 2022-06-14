@@ -339,18 +339,19 @@ def admin(option=None, number=None):
         return render_template('exercises_admin.html', page_title=page_title, problems=problems, categories=categories, current_page=current_page, max_pages=max_pages)
     if option == 'groups':
         page_title = 'Administración de Paralelos'
-        cursor.execute('SELECT id_group FROM groups WHERE id_group != 0;')
+        cursor.execute('SELECT id_group FROM `groups`;')
         groups = cursor.fetchall()
 
         id_group = number
 
         if id_group == None:
-            id_group = 0
+            id_group = -1
         
         print('id_group:', id_group)
 
         add = '(' + str(id_group) + ')'
-        if id_group == 0:
+        
+        if id_group == -1:
             add = '(' + ','.join([str(x[0]) for x in groups]) + ')'
         
         cursor.execute('SELECT categories.category, COUNT(*) FROM submission_2 JOIN problems ON problems.id_problem=submission_2.id_problem JOIN categories ON categories.id_category=problems.category JOIN users ON users.id_user=submission_2.email WHERE users.id_group IN ' + add + ' GROUP BY problems.category ORDER BY categories.id_category;')
@@ -382,12 +383,12 @@ def admin(option=None, number=None):
         cursor.execute('SELECT categories.category, COUNT(*) FROM distribution JOIN categories ON categories.id_category=distribution.category JOIN users ON users.id_user=distribution.email WHERE users.id_group IN ' + add + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
 
         distributions = [list(x) for x in cursor.fetchall()]
-
-        for i in range(len(distributions)):
-            for j in range(1, 4):
-                cursor.execute('SELECT COUNT(*) FROM distribution JOIN categories ON categories.id_category=distribution.category JOIN users ON users.id_user=distribution.email WHERE users.id_group IN ' + add + ' AND distribution.level=' + str(j) + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
-                quantity = cursor.fetchone()
-                distributions[i].append(0 if quantity == None else quantity[0])
+        
+        for i in range(1, 4):
+            cursor.execute('SELECT COUNT(*) FROM distribution JOIN categories ON categories.id_category=distribution.category JOIN users ON users.id_user=distribution.email WHERE users.id_group IN ' + add + ' AND distribution.level=' + str(i) + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
+            amounts = [x[0] for x in cursor.fetchall()]
+            for j in range(len(amounts)):
+                distributions[j].append(0 if amounts[j] == None else amounts[j])
 
         print('distributions:', distributions)
 
@@ -403,12 +404,14 @@ def admin(option=None, number=None):
 
         general_data = [0] * 6
 
-        cursor.execute('SELECT COUNT(*) FROM users WHERE id_group IN ' + add + ';')
+        sql = 'SELECT COUNT(*) FROM users WHERE id_group IN ' + add + ';'
+        print('sql:', sql)
+        cursor.execute(sql)
         general_data[0] = cursor.fetchone()[0]
 
         general_data[1] = sum([x[1] for x in submissions_by_verdict])
         general_data[2] = sum([x[1] for x in badges])
-        general_data[3] = sum([x[4] for x in distributions])
+        general_data[3] = sum([x[1] for x in distributions])
 
         cursor.execute('SELECT COUNT(*) FROM feedback JOIN users ON users.id_user=feedback.email WHERE users.id_group IN ' + add + ';')
         general_data[4] = cursor.fetchone()[0]
@@ -970,3 +973,12 @@ def scheduled_task():
 scheduler.add_job(id='Scheduled Task', func=scheduled_task, trigger='interval', seconds=3600)
 scheduler.start()
 '''
+
+'''
+@app.errorhandler(Exception)
+def exception_handler(error):
+    return repr(error)
+'''
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0')
