@@ -72,22 +72,6 @@ def modified_b64decode(string):
     else:
         return None
 
-def check_user_for_survey(cursor):
-    if 'user' in session:
-        min_submissions = 2
-        min_distributions = 3
-        cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE email=%(email)s;', { 'email': session['user'] })
-        total_submissions = cursor.fetchone()[0]
-        cursor.execute('SELECT COUNT(*) FROM distribution WHERE email=%(email)s;', { 'email': session['user'] })
-        total_distributions = cursor.fetchone()[0]
-        flag = total_submissions >= min_submissions or total_distributions >= min_distributions
-        #print(total_submissions)
-        #print(total_distributions)
-        #print(flag)
-        if flag:
-            foo = redirect(url_for('survey'))
-            return foo
-
 @app.route('/')
 def index():
     conn = mysql.connect()
@@ -310,7 +294,6 @@ def profile():
 
     conn = mysql.connect()
     cursor = conn.cursor()
-    check_user_for_survey(cursor)
     cursor.execute('SELECT * FROM users WHERE id_user=%(user)s', { 'user': session['user'] })
     profile_data = [x for x in cursor.fetchall()[0]]
     profile_data.append('Estudiante' if session['role'] == 'learner' else 'Profesor')
@@ -954,6 +937,30 @@ def update_category():
             return { 'message': 'no_ok' }, 400
     else:
        return { 'message': 'no_ok' }, 400
+
+@app.route('/api/check_user_for_survey', methods=['GET'])
+def check_user_for_survey():
+    if 'user' in session:
+        conn = mysql.connect()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM survey_answers WHERE email=%(email)s', { 'email': session['user'] });
+        survey_answered = True if cursor.fetchone()[0] > 0 else False
+        if not survey_answered:
+            min_submissions = 3
+            min_distributions = 4
+            cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE email=%(email)s;', { 'email': session['user'] })
+            total_submissions = cursor.fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM distribution WHERE email=%(email)s;', { 'email': session['user'] })
+            total_distributions = cursor.fetchone()[0]
+            flag = total_submissions >= min_submissions or total_distributions >= min_distributions
+            if flag:
+                return { 'message': 'ok' }, 200
+            else:
+                return { 'message': 'no_ok' }, 200
+        else:
+            return { 'message': 'no_ok' }, 200
+    else:
+        return { 'message': 'no_ok' }, 200
 
 @app.route('/submissions', methods=['GET'])
 @app.route('/submissions/<int:page>', methods=['GET'])

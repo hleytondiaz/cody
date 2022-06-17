@@ -79,6 +79,30 @@
 				$('#nav-link-admin').addClass('active');
 			}
 		</script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$.ajax({
+					url: window.location.origin + '/api/check_user_for_survey',
+					type: 'GET',
+					contentType: 'application/json',
+					dataType: 'json',
+					timeout: 3000,
+					beforeSend: function() {
+					},
+					success : function(json) {
+						if (window.location.pathname !== '/survey') {
+							if (json['message'] == 'ok') {
+								window.location.href =  window.location.origin + '/survey'
+							}
+						}
+					},
+					error : function(xhr, status) {
+					},
+					complete : function(xhr, status) {
+					}
+				});
+			});
+		</script>
 		{% block additional_javascript %}{% endblock %}
 	</body>
 </html>
