@@ -72,6 +72,22 @@ def modified_b64decode(string):
     else:
         return None
 
+def check_user_for_survey(cursor):
+    if 'user' in session:
+        min_submissions = 2
+        min_distributions = 3
+        cursor.execute('SELECT COUNT(*) FROM submission_2 WHERE email=%(email)s;', { 'email': session['user'] })
+        total_submissions = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM distribution WHERE email=%(email)s;', { 'email': session['user'] })
+        total_distributions = cursor.fetchone()[0]
+        flag = total_submissions >= min_submissions or total_distributions >= min_distributions
+        #print(total_submissions)
+        #print(total_distributions)
+        #print(flag)
+        if flag:
+            foo = redirect(url_for('survey'))
+            return foo
+
 @app.route('/')
 def index():
     conn = mysql.connect()
@@ -294,6 +310,7 @@ def profile():
 
     conn = mysql.connect()
     cursor = conn.cursor()
+    check_user_for_survey(cursor)
     cursor.execute('SELECT * FROM users WHERE id_user=%(user)s', { 'user': session['user'] })
     profile_data = [x for x in cursor.fetchall()[0]]
     profile_data.append('Estudiante' if session['role'] == 'learner' else 'Profesor')
@@ -303,6 +320,35 @@ def profile():
     badges = cursor.fetchall()
     page_title = 'Perfil'
     return render_template('profile.html', page_title=page_title, profile_data=profile_data, groups=groups, badges=badges)
+
+@app.route('/survey', methods=['GET', 'POST'])
+def survey():
+    if 'user' not in session:
+        return render_template('not_authorized.html', page_title='Acceso denegado')
+    
+    status = 'SURVEY_NOT_ANSWERED'
+    conn = mysql.connect()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM survey_answers WHERE email=%(email)s', { 'email': session['user'] });
+    survey_answered = True if cursor.fetchone()[0] > 0 else False
+
+    if survey_answered:
+        status = 'SURVEY_ALREADY_ANSWERED'
+    else:
+        if request.method == 'POST':
+            textarea1 = request.form['textarea1']
+            textarea2 = request.form['textarea2']
+            textarea3 = request.form['textarea3']
+            textarea4 = request.form['textarea4']
+            textarea5 = request.form['textarea5']
+            status = 'SURVEY_ANSWERED'
+            insert_stmt = 'INSERT INTO survey_answers (email, textarea1, textarea2, textarea3, textarea4, textarea5, datetime) VALUES (%s, %s, %s, %s, %s, %s, %s)'
+            data = (session['user'], textarea1, textarea2, textarea3, textarea4, textarea5, datetime.now())
+            cursor.execute(insert_stmt, data)
+            conn.commit()
+    page_title = 'Encuesta'
+    return render_template('survey.html', page_title=page_title, status=status)
 
 @app.route('/admin/<string:option>', methods=['GET'])
 @app.route('/admin/<string:option>/<int:number>', methods=['GET'])
@@ -347,8 +393,6 @@ def admin(option=None, number=None):
         if id_group == None:
             id_group = -1
         
-        print('id_group:', id_group)
-
         add = '(' + str(id_group) + ')'
         
         if id_group == -1:
@@ -362,8 +406,6 @@ def admin(option=None, number=None):
                 quantity = cursor.fetchone()
                 submissions_quantity_summary[i].append(0 if quantity == None else quantity[0])
         
-        print('submissions_quantity_summary:', submissions_quantity_summary)
-
         cursor.execute('SELECT submission_2.verdict_id, COUNT(*) FROM submission_2 JOIN users ON users.id_user=submission_2.email WHERE users.id_group IN ' + add + ' GROUP BY submission_2.verdict_id ORDER BY submission_2.verdict_id;')
         submissions_by_verdict = [list(x) for x in cursor.fetchall()]
         sum_submissions = sum([x[1] for x in submissions_by_verdict])
@@ -378,10 +420,7 @@ def admin(option=None, number=None):
                         avg = round(100 * (submissions_by_verdict[i][1] / sum_submissions), 2)
                     submissions_by_verdict[i].append(avg)
         
-        print('submissions_by_verdict:', submissions_by_verdict)
-
         cursor.execute('SELECT categories.category, COUNT(*) FROM distribution JOIN categories ON categories.id_category=distribution.category JOIN users ON users.id_user=distribution.email WHERE users.id_group IN ' + add + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
-
         distributions = [list(x) for x in cursor.fetchall()]
         
         for i in range(1, 4):
@@ -390,22 +429,14 @@ def admin(option=None, number=None):
             for j in range(len(amounts)):
                 distributions[j].append(0 if amounts[j] == None else amounts[j])
 
-        print('distributions:', distributions)
-
         cursor.execute('SELECT badges.description, COUNT(*) FROM badges_users JOIN users ON users.id_user=badges_users.email JOIN badges ON badges.id_badge=badges_users.id_badge WHERE users.id_group IN ' + add + ' GROUP BY badges.id_badge ORDER BY badges.id_badge ASC;')
         badges = cursor.fetchall()
 
-        print('badges:', badges)
-
         cursor.execute('SELECT categories.category, (SELECT ROUND(AVG(quiz_attempts.score_obtained), 2) FROM quiz_attempts JOIN users ON users.id_user=quiz_attempts.email WHERE quiz_attempts.category=categories.id_category AND users.id_group IN ' + add + ') AS mean, COUNT(*) AS total FROM quiz_attempts JOIN categories ON categories.id_category=quiz_attempts.category JOIN users ON users.id_user=quiz_attempts.email WHERE users.id_group IN ' + add + ' GROUP BY categories.id_category ORDER BY categories.id_category ASC;')
         quiz_attempts = cursor.fetchall()
-
-        print('quiz_attempts:', quiz_attempts)
-
         general_data = [0] * 6
 
         sql = 'SELECT COUNT(*) FROM users WHERE id_group IN ' + add + ';'
-        print('sql:', sql)
         cursor.execute(sql)
         general_data[0] = cursor.fetchone()[0]
 
@@ -902,6 +933,27 @@ def user_progress():
         return dicc, 200
     else:
         return { 'message': 'no_ok' }, 400
+
+@app.route('/api/update_category', methods=['POST'])
+def update_category():
+    body = request.get_json()
+    if body is None:
+        return 'The request body is null', 400
+    if 'id_problem' not in body:
+        return 'You need to specify the id_problem', 400
+    if 'id_category' not in body:
+        return 'You need to specify the id_category', 400
+    if 'user' in session:
+        if session['role'] == 'instructor':
+            conn = mysql.connect()
+            cursor = conn.cursor()
+            cursor.execute('UPDATE problems SET category=%(cat)s WHERE id_problem=%(id_pro)s', { 'id_pro': body['id_problem'], 'cat': body['id_category'] })
+            conn.commit()
+            return { 'message': 'ok' }, 200
+        else:
+            return { 'message': 'no_ok' }, 400
+    else:
+       return { 'message': 'no_ok' }, 400
 
 @app.route('/submissions', methods=['GET'])
 @app.route('/submissions/<int:page>', methods=['GET'])
