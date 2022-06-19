@@ -14,6 +14,9 @@
 		<div class="card">
 			<h5 class="card-header">Tarea</h5>
 			<div class="card-body">
+				<p class="my-0">
+					{{ subproblem_data[4] | safe }}
+				</p>
 				<h6>Entrada</h6>
 				<p>
 					{{ subproblem_data[0] | safe }}
@@ -137,6 +140,16 @@
 	{% if problem_allowed %}
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.15.2/katex.min.css">
+		<style>
+			pre {
+				overflow-x: auto;
+				white-space: pre-wrap;
+				white-space: -moz-pre-wrap;
+				white-space: -pre-wrap;
+				white-space: -o-pre-wrap;
+				word-wrap: break-word;
+			}
+		</style>
 	{% endif %}
 {% endblock %}
 

@@ -45,7 +45,7 @@ categories = [
     ['strings', 'Strings'],
     ['funciones', 'Funciones'],
     ['listas', 'Listas'],
-    ['tuplas', 'Tuplas'],
+    ['tuplas', 'Tuplas (Omitir)'],
     ['diccionarios', 'Diccionarios']
 ]
 
@@ -236,7 +236,7 @@ def exercises(category=None, id_exercise=None):
                 score = 0 if score == None else round(score, 2)
                 exercises.append([_id, title, level, score])
 
-            page_title = 'Ejercicios ' + categories[category_index][1]
+            page_title = 'Ejercicios ' + categories[category_index - 1][1]
 
             return render_template('exercises.html', page_title=page_title, exercises=exercises, exercise_category=category, quiz_attempted=quiz_attempted)
         else:
@@ -249,13 +249,14 @@ def exercises(category=None, id_exercise=None):
             id_problem, title, statement = cursor.fetchone()
             html = markdown.markdown(statement, extensions=['tables', 'fenced_code'])
             problem_data = (id_problem, title, html)
-            cursor.execute('SELECT input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
-            input_description, output_description, observations, notes_examples = cursor.fetchone()
+            cursor.execute('SELECT `text`, input_description, output_description, observations, notes_examples FROM subproblems WHERE id_problem=%(id_pro)s AND subproblem=1;', { 'id_pro': id_exercise })
+            text, input_description, output_description, observations, notes_examples = cursor.fetchone()
+            text = markdown.markdown(text, extensions=['tables', 'fenced_code'])
             input_description = markdown.markdown(input_description, extensions=['tables', 'fenced_code'])
             output_description = markdown.markdown(output_description, extensions=['tables', 'fenced_code'])
             observations = markdown.markdown(observations, extensions=['tables', 'fenced_code'])
             notes_examples = markdown.markdown(notes_examples, extensions=['tables', 'fenced_code'])
-            subproblem_data = (input_description, output_description, observations, notes_examples)
+            subproblem_data = (input_description, output_description, observations, notes_examples, text)
             cursor.execute('SELECT stdin, expected_output FROM test_cases WHERE id_problem = %(id_pro)s AND subproblem = 1 AND sample = 1 ORDER BY id_test_case ASC;', { 'id_pro': id_exercise })
             tests_cases_data = cursor.fetchall()
             page_title = title if problem_allowed else 'Error'

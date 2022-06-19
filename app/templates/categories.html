@@ -14,7 +14,7 @@
 			<th style="text-align: center;">Opción</th>
 		</thead>
 		<tbody>
-			{% for i in range(8) %}
+			{% for i in range(categories|length) %}
 			<tr>
 				<td>
 					{% if disablements[i] %}
