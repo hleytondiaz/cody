@@ -29,7 +29,7 @@
 					{% else %}
 						<td class="table-success" style="text-align: right;">{{ sub[2] }}</td>
 					{% endif %}
-					<td style="text-align: right;">{{ sub[3].strftime('%H:%M%:%S %d-%m-%Y') }}</td>
+					<td style="text-align: right;">{{ sub[3].strftime('%H:%M:%S %d-%m-%Y') }}</td>
 					<td style="text-align: center;">
 						<button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#exampleModal" data-id-submission={{ sub[0] }}>Detalle</button>
 					</td>
@@ -96,7 +96,7 @@
 				let sourceCode = json['source_code'];
 				let arr = json['test_cases'];
 				$(".modal-body").empty();
-				$('.modal-body').append('<pre><code class="language-python">' + sourceCode + '</code></pre>');
+				$('.modal-body').append('<pre style="overflow-x: auto; white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;"><code class="language-python">' + sourceCode + '</code></pre>');
 				hljs.highlightAll();
 				for (let i = 1; i <= arr.length; i++) {
 					$('.modal-body').append('<div id="test-case-' + i.toString() + '"></div>');
@@ -111,7 +111,7 @@
 
 					if (arr[i - 1]['sample']) {
 						let input = arr[i - 1]['stdin'].length > 0 ? arr[i - 1]['stdin'] : ' ';
-						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + input + '</pre></td></tr>');
+						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre style="overflow-x: auto; white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;" class="mb-0">' + input + '</pre></td></tr>');
 					}
 
 					$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida generada</td></tr>');
@@ -119,13 +119,13 @@
 					if (arr[i - 1]['sample'] || arr[i - 1]['stderr'] !== null) {
 						output = arr[i - 1]['stderr'] === null ? arr[i - 1]['stdout'] : arr[i - 1]['stderr'];
 						if (output === null) output = ' ';
-						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + output + '</pre></td></tr>');
+						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre style="overflow-x: auto; white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;" class="mb-0">' + output + '</pre></td></tr>');
 					}
 					
 					$("#tb-" + i.toString()).append('<tr><td style="font-weight: 600;">Salida esperada</td></tr>');
 					
 					if (arr[i - 1]['sample']) {
-						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
+						$("#tb-" + i.toString()).append('<tr><td class="bg-light"><pre style="overflow-x: auto; white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word;" class="mb-0">' + arr[i - 1]['expected_output'] + '</pre></td></tr>');
 					}
 
 					if (arr[i - 1]['feedback'].length > 0 && arr[i - 1]['status_id'] != 3) {
